@@ -1,0 +1,8 @@
+# Builds
+builds
+
+# Node.js / Svelte Client
+client/node_modules
+client/.svelte-kit
+
+# Go / Svelte Server
