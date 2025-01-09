@@ -23,6 +23,7 @@ func main() {
 	mux.Handle("/api/room", middleware.WithMiddleware(
 		handlers.CreateRoomHandler(storage),
 		middleware.ValidateAPIKey(),
+		middleware.ValidateOrigin(),
 		middleware.ValidateHTTPMethod(http.MethodPost),
 	))
 
