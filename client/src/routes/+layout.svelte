@@ -1,5 +1,5 @@
 <script>
-    import "../global.css";
+    import "../styles/global.css";
     import Footer from "$lib/Footer.svelte";
 </script>
 

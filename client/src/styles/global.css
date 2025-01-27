@@ -1,3 +1,5 @@
+@import "./colors.css";
+
 *,
 *::before,
 *::after {
@@ -6,27 +8,32 @@
     box-sizing: border-box;
 }
 
-html {
+html,
+body {
     height: 100%;
     width: 100%;
     font-size: 20px;
     font-family: serif;
-    background-color: #1f011d;
-    color: #cbc6ac;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--main-background-color);
+    color: var(--main-text-color);
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
 }
 
 /* Tablet */
 @media (max-width: 768px) {
     html {
-        font-size: 17px;
+        font-size: 17.5px;
     }
 }
 
 /* Mobile */
 @media (max-width: 480px) {
     html {
-        font-size: 14px;
+        font-size: 15px;
     }
 }

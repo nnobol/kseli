@@ -1,0 +1,30 @@
+:root {
+    /* ==================== Main Color Palette ==================== */
+    --main-background-color: #1f011d;
+    --main-text-color: #cbc6ac;
+    --main-button-color: #d26100;
+    --main-button-text-color: #bcb594;
+
+    /* ==================== Hover Effect Palette ==================== */
+    --hover-background: #ab4f00;
+    /* For buttons or interactive elements */
+    --hover-text: #ada47c;
+    --hover-opacity: 0.8;
+    /* General hover effect intensity */
+
+    /* ==================== Secondary Palette ==================== */
+    --secondary-background: #cbc6ac;
+    --secondary-text: #32012f;
+    --secondary-button-background: #bcb594;
+    --secondary-button-text: #1f011d;
+
+    /* ==================== Error Palette ==================== */
+    --error-text: #d8000c;
+    --error-background: #ffe4e4;
+    --error-button-background: #d8000c;
+    --error-button-text: #ffffff;
+
+    /* ==================== Miscellaneous ==================== */
+    --modal-background: #cbc6ac;
+    --overlay-opacity: 0.4;
+}

@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"kseli-server/config"
 	"kseli-server/handlers"
@@ -16,8 +18,23 @@ func main() {
 	storage := storage.NewMemoryStore()
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(http.Dir("../builds/client"))
-	mux.Handle("/", fileServer)
+	appDir := "../builds/client"
+	fileServer := http.FileServer(http.Dir(appDir))
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestRoute := filepath.Join(appDir, r.URL.Path)
+
+		_, err := os.Stat(requestRoute)
+		if os.IsNotExist(err) {
+			http.ServeFile(w, r, filepath.Join(appDir, "index.html"))
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	// POST request to create a chat room, public, using API key
 	mux.Handle("/api/room", middleware.WithMiddleware(
