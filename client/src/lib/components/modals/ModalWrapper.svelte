@@ -4,22 +4,23 @@
   import { fade } from "svelte/transition";
 
   interface Props {
+    loading: boolean;
     closeModal: () => void;
     content: Snippet<[{ closeModal: () => void }]>;
   }
 
-  let { closeModal, content }: Props = $props();
+  let { loading, closeModal, content }: Props = $props();
 
   let dialogElement: HTMLDialogElement | null = null;
 
   function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !loading) {
       closeModal();
     }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && !loading) {
       closeModal();
     }
   }

@@ -2,11 +2,13 @@ package util
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 )
 
 var GenerateRandomIDFunc = generateRandomID
+var GenerateRoomIDFunc = generateRoomID
 
 func generateRandomID() (string, error) {
 	b := make([]byte, 16)
@@ -15,4 +17,10 @@ func generateRandomID() (string, error) {
 	}
 
 	return fmt.Sprintf("%x", b), nil
+}
+
+func generateRoomID() string {
+	randomBytes := make([]byte, 6)
+	rand.Read(randomBytes)
+	return base64.RawURLEncoding.EncodeToString(randomBytes)
 }

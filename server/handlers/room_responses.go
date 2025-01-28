@@ -5,6 +5,10 @@ type CreateRoomResponse struct {
 	Token  string `json:"token"`
 }
 
+type JoinRoomResponse struct {
+	Token string `json:"token"`
+}
+
 type ErrorResponse struct {
 	StatusCode   int               `json:"statusCode"`
 	ErrorMessage string            `json:"errorMessage"`

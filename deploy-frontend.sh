@@ -1,8 +1,18 @@
 #!/bin/bash
 
+# Set Env Variables
+export SECRET_KEY="super-secure-secret-key"
+export API_KEY="super-secure-api-key"
+
 # Build Frontend
 cd client
-npm run build
+
+if [ -z "$API_KEY" ]; then
+    echo "Error: API_KEY environment variable is not set."
+    exit 1
+fi
+
+VITE_API_KEY=$API_KEY npm run build
 
 # Verify Build Success
 if [ $? -ne 0 ]; then
@@ -22,3 +32,10 @@ else
     echo "Build directory client-new not found. Aborting."
     exit 1
 fi
+
+# Run Server
+cd ..
+
+cd server
+
+go run cmd/main.go

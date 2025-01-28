@@ -1,23 +1,24 @@
 package storage
 
 import (
-	"crypto/rand"
-	"encoding/base64"
+	"fmt"
 	"sync"
 
 	"kseli-server/models"
+	"kseli-server/util"
 )
 
 type Room struct {
-	ID              string         `json:"id"`
-	Admin           *models.User   `json:"admin"`
-	Participants    []*models.User `json:"participants"`
-	MaxParticipants int            `json:"maxParticipants"`
+	mu              sync.RWMutex
+	ID              string                  `json:"id"`
+	MaxParticipants int                     `json:"maxParticipants"`
+	SecretKey       string                  `json:"secretKey"`
+	Participants    map[string]*models.User `json:"participants"`
 }
 
 type RoomStorage struct {
-	rwMutex sync.RWMutex
-	rooms   map[string]*Room
+	mu    sync.RWMutex
+	rooms map[string]*Room
 }
 
 func NewMemoryStore() *RoomStorage {
@@ -27,30 +28,48 @@ func NewMemoryStore() *RoomStorage {
 }
 
 func (storage *RoomStorage) CreateRoom(adminUser *models.User, maxParticipants int) string {
-	storage.rwMutex.Lock()
-	defer storage.rwMutex.Unlock()
+	storage.mu.Lock()
+	defer storage.mu.Unlock()
 
-	var roomID string
+	var roomID, secretKey string
 	for {
-		roomID = generateRoomID()
+		roomID = util.GenerateRoomIDFunc()
+		secretKey = util.GenerateRoomIDFunc()
 		if _, exists := storage.rooms[roomID]; !exists {
 			break
 		}
 	}
 
+	fmt.Print(secretKey)
+
 	room := &Room{
 		ID:              roomID,
-		Admin:           adminUser,
-		Participants:    []*models.User{adminUser},
 		MaxParticipants: maxParticipants,
+		SecretKey:       secretKey,
+		Participants:    make(map[string]*models.User),
 	}
+
+	room.Participants[adminUser.Username] = adminUser
 
 	storage.rooms[roomID] = room
 	return roomID
 }
 
-func generateRoomID() string {
-	randomBytes := make([]byte, 6)
-	rand.Read(randomBytes)
-	return base64.RawURLEncoding.EncodeToString(randomBytes)
+func (room *Room) JoinRoom(user *models.User) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	room.Participants[user.Username] = user
+}
+
+func (storage *RoomStorage) GetRoom(roomID string) (*Room, error) {
+	storage.mu.RLock()
+	defer storage.mu.RUnlock()
+
+	room, exists := storage.rooms[roomID]
+	if !exists {
+		return nil, fmt.Errorf("room not found")
+	}
+
+	return room, nil
 }

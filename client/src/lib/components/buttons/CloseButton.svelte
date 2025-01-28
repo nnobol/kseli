@@ -43,8 +43,8 @@
 
     /* Styles for error alert close button */
     .error {
-        position: relative;
-        left: 1rem;
+        /* position: relative;
+        left: 1rem; */
         color: #d8000c;
     }
 </style>

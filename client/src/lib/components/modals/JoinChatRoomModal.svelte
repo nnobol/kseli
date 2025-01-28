@@ -4,10 +4,10 @@
     import FloatingInputField from "../fields/FloatingInputField.svelte";
     import ErrorAlert from "../alerts/ErrorAlert.svelte";
     import { joinRoom } from "../../../api/rooms";
-    // import type {
-    //     CreateRoomPayload,
-    //     CreateRoomErrorResponse,
-    // } from "../../../api/rooms";
+    import type {
+        JoinRoomPayload,
+        RoomErrorResponse,
+    } from "../../../api/rooms";
 
     interface Props {
         closeModal: () => void;
@@ -58,7 +58,9 @@
         if (!hasSubmitted) return;
 
         if (!roomId) {
-            fieldErrors.roomId = "Room Id is required.";
+            fieldErrors.roomId = "Chat Room Id is required.";
+        } else if (/\s/.test(roomId)) {
+            fieldErrors.roomId = "Chat Room Id cannot contain spaces.";
         } else {
             delete fieldErrors.roomId;
         }
@@ -68,7 +70,10 @@
         if (!hasSubmitted) return;
 
         if (!roomSecretKey) {
-            fieldErrors.roomSecretKey = "Secret Key is required.";
+            fieldErrors.roomSecretKey = "Chat Room Secret Key is required.";
+        } else if (/\s/.test(roomSecretKey)) {
+            fieldErrors.roomSecretKey =
+                "Chat Room Secret Key cannot contain spaces.";
         } else {
             delete fieldErrors.roomSecretKey;
         }
@@ -87,12 +92,17 @@
 
         loading = true;
 
+        const payload: JoinRoomPayload = { username, roomSecretKey };
+
         try {
-            await joinRoom();
+            const response = await joinRoom(roomId, payload);
             // Handle success (e.g., redirect or update the UI)
             console.log("Room joined successfully");
         } catch (err: any) {
-            console.log(err);
+            const error = err as RoomErrorResponse;
+
+            errorMessage = error.errorMessage;
+            fieldErrors = error.fieldErrors || {};
         } finally {
             loading = false;
         }
@@ -143,7 +153,7 @@
     />
 {/snippet}
 
-<ModalWrapper {closeModal} content={modalContent} />
+<ModalWrapper {loading} {closeModal} content={modalContent} />
 
 {#if errorMessage}
     <ErrorAlert {errorMessage} {clearErrorMessage} />

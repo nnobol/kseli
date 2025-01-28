@@ -7,7 +7,7 @@
     import { createRoom } from "../../../api/rooms";
     import type {
         CreateRoomPayload,
-        CreateRoomErrorResponse,
+        RoomErrorResponse,
     } from "../../../api/rooms";
 
     interface Props {
@@ -83,7 +83,7 @@
             // Handle success (e.g., redirect or update the UI)
             console.log("Room created successfully:", response.roomId);
         } catch (err: any) {
-            const error = err as CreateRoomErrorResponse;
+            const error = err as RoomErrorResponse;
 
             errorMessage = error.errorMessage;
             fieldErrors = error.fieldErrors || {};
@@ -126,7 +126,7 @@
     />
 {/snippet}
 
-<ModalWrapper {closeModal} content={modalContent} />
+<ModalWrapper {loading} {closeModal} content={modalContent} />
 
 {#if errorMessage}
     <ErrorAlert {errorMessage} {clearErrorMessage} />

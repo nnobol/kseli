@@ -34,7 +34,7 @@ func TestCreateRoomHandler_Success(t *testing.T) {
 	}
 	bodyBytes, _ := json.Marshal(requestBody)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader(bodyBytes))
+	req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
@@ -66,7 +66,7 @@ func TestCreateRoomHandler_DecodeFailure(t *testing.T) {
 	// Invalid JSON payload
 	invalidJSON := `{"username": "JohnDoe", "maxParticipants": 3,`
 
-	req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader([]byte(invalidJSON)))
+	req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader([]byte(invalidJSON)))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
@@ -103,7 +103,7 @@ func TestCreateRoomHandler_GenerateRandomIDFailure(t *testing.T) {
 	}
 	bodyBytes, _ := json.Marshal(requestBody)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader(bodyBytes))
+	req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
@@ -140,7 +140,7 @@ func TestCreateRoomHandler_CreateTokenFailure(t *testing.T) {
 	}
 	bodyBytes, _ := json.Marshal(requestBody)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader(bodyBytes))
+	req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
@@ -180,7 +180,7 @@ func TestCreateRoomHandler_InvalidUsername(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "Validation error",
 			expectedFields: map[string]string{
-				"username": "Username cannot contain spaces",
+				"username": "Username cannot contain spaces.",
 			},
 		},
 		{
@@ -189,7 +189,7 @@ func TestCreateRoomHandler_InvalidUsername(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "Validation error",
 			expectedFields: map[string]string{
-				"username": "Username must be between 3 and 20 characters",
+				"username": "Username must be between 3 and 20 characters.",
 			},
 		},
 	}
@@ -204,7 +204,7 @@ func TestCreateRoomHandler_InvalidUsername(t *testing.T) {
 			bodyBytes, _ := json.Marshal(requestBody)
 
 			// Prepare HTTP request and recorder
-			req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader(bodyBytes))
+			req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
 
@@ -251,11 +251,11 @@ func TestCreateRoomHandler_InvalidUsername(t *testing.T) {
 // TestCreateRoomHandler_InvalidMaxParticipants validates MaxParticipants validation errors.
 func TestCreateRoomHandler_InvalidMaxParticipants(t *testing.T) {
 	testCases := []struct {
-		name            string            // Test case name
-		maxParticipants int               // Input maxParticipants
-		expectedStatus  int               // Expected HTTP status
-		expectedError   string            // Expected general error message
-		expectedFields  map[string]string // Expected field-specific errors
+		name            string
+		maxParticipants int
+		expectedStatus  int
+		expectedError   string
+		expectedFields  map[string]string
 	}{
 		{
 			name:            "MaxParticipants is less than minimum (1)",
@@ -263,7 +263,7 @@ func TestCreateRoomHandler_InvalidMaxParticipants(t *testing.T) {
 			expectedStatus:  http.StatusBadRequest,
 			expectedError:   "Validation error",
 			expectedFields: map[string]string{
-				"maxParticipants": "Max participants must be between 2 and 5",
+				"maxParticipants": "Max participants must be between 2 and 5.",
 			},
 		},
 		{
@@ -272,7 +272,7 @@ func TestCreateRoomHandler_InvalidMaxParticipants(t *testing.T) {
 			expectedStatus:  http.StatusBadRequest,
 			expectedError:   "Validation error",
 			expectedFields: map[string]string{
-				"maxParticipants": "Max participants must be between 2 and 5",
+				"maxParticipants": "Max participants must be between 2 and 5.",
 			},
 		},
 		{
@@ -281,7 +281,7 @@ func TestCreateRoomHandler_InvalidMaxParticipants(t *testing.T) {
 			expectedStatus:  http.StatusBadRequest,
 			expectedError:   "Validation error",
 			expectedFields: map[string]string{
-				"maxParticipants": "Max participants must be between 2 and 5",
+				"maxParticipants": "Max participants must be between 2 and 5.",
 			},
 		},
 	}
@@ -297,7 +297,7 @@ func TestCreateRoomHandler_InvalidMaxParticipants(t *testing.T) {
 			bodyBytes, _ := json.Marshal(requestBody)
 
 			// Prepare HTTP request and recorder
-			req := httptest.NewRequest(http.MethodPost, "/api/room", bytes.NewReader(bodyBytes))
+			req := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
 

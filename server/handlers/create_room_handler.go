@@ -23,10 +23,13 @@ func CreateRoomHandler(storage *storage.RoomStorage) http.HandlerFunc {
 
 		// Validate inputs
 		fieldErrors := make(map[string]string)
+
 		validateUsername(req.Username, fieldErrors)
+
 		if req.MaxParticipants < 2 || req.MaxParticipants > 5 {
-			fieldErrors["maxParticipants"] = "Max participants must be between 2 and 5"
+			fieldErrors["maxParticipants"] = "Max participants must be between 2 and 5."
 		}
+
 		if len(fieldErrors) > 0 {
 			WriteJSONError(w, http.StatusBadRequest, "Validation error", fieldErrors)
 			return

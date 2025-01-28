@@ -29,7 +29,7 @@
         display: flex;
         align-items: center;
         text-align: center;
-        /* justify-content: center; */
+        justify-content: space-between;
         gap: 1rem;
 
         background: #ffe4e4;

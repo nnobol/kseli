@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"kseli-server/config"
 	"kseli-server/handlers"
@@ -21,7 +22,26 @@ func main() {
 	appDir := "../builds/client"
 	fileServer := http.FileServer(http.Dir(appDir))
 
+	// POST request to create a chat room, public, using API key
+	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
+		handlers.CreateRoomHandler(storage),
+		middleware.ValidateAPIKey(),
+		middleware.ValidateOrigin(),
+	))
+
+	// POST request for a user to join a chat room, public, using API key
+	mux.Handle("POST /api/rooms/{roomID}/users", middleware.WithMiddleware(
+		handlers.JoinRoomHandler(storage),
+		middleware.ValidateAPIKey(),
+		middleware.ValidateOrigin(),
+	))
+
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			handlers.WriteJSONError(w, http.StatusNotFound, "Resource Not Found.", nil)
+			return
+		}
+
 		requestRoute := filepath.Join(appDir, r.URL.Path)
 
 		_, err := os.Stat(requestRoute)
@@ -35,14 +55,6 @@ func main() {
 
 		fileServer.ServeHTTP(w, r)
 	}))
-
-	// POST request to create a chat room, public, using API key
-	mux.Handle("/api/room", middleware.WithMiddleware(
-		handlers.CreateRoomHandler(storage),
-		middleware.ValidateAPIKey(),
-		middleware.ValidateOrigin(),
-		middleware.ValidateHTTPMethod(http.MethodPost),
-	))
 
 	log.Println("Listening on :8080...")
 	err := http.ListenAndServe(":8080", mux)

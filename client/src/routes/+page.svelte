@@ -29,11 +29,11 @@
 
     <div class="button-container">
         <button class="join-chat-room" onclick={openJoinModal}>
-            Join a Chat Room
+            Join Chat Room
         </button>
 
         <button class="create-chat-room" onclick={openCreateModal}>
-            Create a Chat Room
+            Create Chat Room
         </button>
     </div>
 
