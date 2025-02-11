@@ -100,7 +100,8 @@ func JoinRoomHandler(storage *storage.RoomStorage) http.HandlerFunc {
 		}
 
 		joinRoomResponse := JoinRoomResponse{
-			Token: token,
+			RoomID: room.ID,
+			Token:  token,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

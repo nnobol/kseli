@@ -9,7 +9,7 @@ import (
 )
 
 type Room struct {
-	mu              sync.RWMutex
+	Mu              sync.RWMutex
 	ID              string                  `json:"id"`
 	MaxParticipants int                     `json:"maxParticipants"`
 	SecretKey       string                  `json:"secretKey"`
@@ -56,8 +56,8 @@ func (storage *RoomStorage) CreateRoom(adminUser *models.User, maxParticipants i
 }
 
 func (room *Room) JoinRoom(user *models.User) {
-	room.mu.Lock()
-	defer room.mu.Unlock()
+	room.Mu.Lock()
+	defer room.Mu.Unlock()
 
 	room.Participants[user.Username] = user
 }

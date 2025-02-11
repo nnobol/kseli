@@ -22,14 +22,21 @@ func main() {
 	appDir := "../builds/client"
 	fileServer := http.FileServer(http.Dir(appDir))
 
-	// POST request to create a chat room, public, using API key
+	// POST request to create a chat room, auth using API key
 	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
 		handlers.CreateRoomHandler(storage),
 		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))
 
-	// POST request for a user to join a chat room, public, using API key
+	// GET request to get chat room details, using Auth token
+	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
+		handlers.GetRoomHandler(storage),
+		middleware.ValidateAuthToken(),
+		middleware.ValidateOrigin(),
+	))
+
+	// POST request for a user to join a chat room, auth using API key
 	mux.Handle("POST /api/rooms/{roomID}/users", middleware.WithMiddleware(
 		handlers.JoinRoomHandler(storage),
 		middleware.ValidateAPIKey(),

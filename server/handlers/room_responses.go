@@ -1,12 +1,24 @@
 package handlers
 
+import (
+	"kseli-server/models"
+)
+
 type CreateRoomResponse struct {
 	RoomID string `json:"roomId"`
 	Token  string `json:"token"`
 }
 
 type JoinRoomResponse struct {
-	Token string `json:"token"`
+	RoomID string `json:"roomId"`
+	Token  string `json:"token"`
+}
+
+type GetRoomResponse struct {
+	RoomID          string        `json:"roomId"`
+	MaxParticipants int           `json:"maxParticipants"`
+	Participants    []models.User `json:"participants"`
+	SecretKey       string        `json:"secretKey,omitempty"`
 }
 
 type ErrorResponse struct {

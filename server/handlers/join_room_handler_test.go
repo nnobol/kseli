@@ -67,6 +67,10 @@ func TestJoinRoomHandler_Success(t *testing.T) {
 		t.Fatalf("failed to parse response JSON: %v", err)
 	}
 
+	if resp.RoomID == "" {
+		t.Errorf("expected a non-empty roomID in response")
+	}
+
 	if resp.Token == "" {
 		t.Errorf("expected a non-empty token in response")
 	}
