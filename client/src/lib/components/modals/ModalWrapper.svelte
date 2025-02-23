@@ -11,7 +11,7 @@
 
   let { loading, closeModal, content }: Props = $props();
 
-  let dialogElement: HTMLDialogElement | null = null;
+  let modal: HTMLDivElement | null = null;
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget && !loading) {
@@ -25,26 +25,41 @@
     }
   }
 
-  onMount(() => {
-    if (dialogElement) {
-      dialogElement.showModal();
-      dialogElement.focus();
+  function trapFocus() {
+    if (!modal) return;
+
+    const focusedElement = document.activeElement;
+    if (!modal.contains(focusedElement)) {
+      modal.focus();
     }
+  }
+
+  onMount(() => {
+    modal?.focus();
+
+    document.addEventListener("focusin", trapFocus);
+    return () => {
+      document.removeEventListener("focusin", trapFocus);
+    };
   });
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions  - -->
-<dialog
-  bind:this={dialogElement}
+<!-- svelte-ignore a11y_no_noninteractive_tabindex  - -->
+<div
+  class="modal"
+  bind:this={modal}
   onkeydown={handleKeyDown}
   onclick={handleBackdropClick}
   transition:fade={{ duration: 200 }}
+  tabindex="0"
+  role="dialog"
 >
   {@render content({ closeModal })}
-</dialog>
+</div>
 
 <style>
-  dialog {
+  .modal {
     all: unset;
     position: fixed;
     top: 0;

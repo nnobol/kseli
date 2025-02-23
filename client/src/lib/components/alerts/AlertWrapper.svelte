@@ -8,22 +8,34 @@
 
     let { content }: Props = $props();
 
-    let dialogElement: HTMLDialogElement | null = null;
+    let alert: HTMLDivElement | null = null;
+
+    function trapFocus() {
+        if (!alert) return;
+
+        const focusedElement = document.activeElement;
+        if (!alert.contains(focusedElement)) {
+            alert.focus();
+        }
+    }
 
     onMount(() => {
-        if (dialogElement) {
-            dialogElement.showModal();
-            dialogElement.focus();
-        }
+        alert?.focus();
+
+        document.addEventListener("focusin", trapFocus);
+        return () => {
+            document.removeEventListener("focusin", trapFocus);
+        };
     });
 </script>
 
-<dialog bind:this={dialogElement}>
+<!-- svelte-ignore a11y_no_noninteractive_tabindex  - -->
+<div class="alert" bind:this={alert} tabindex="0" role="alert">
     {@render content()}
-</dialog>
+</div>
 
 <style>
-    dialog {
+    .alert {
         all: unset;
         position: fixed;
         top: 0;
@@ -36,6 +48,6 @@
         align-items: center;
         border: none;
         backdrop-filter: blur(3px);
-        z-index: 1000;
+        z-index: 2000;
     }
 </style>
