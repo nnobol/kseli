@@ -9,43 +9,49 @@ import (
 
 	"kseli-server/config"
 	"kseli-server/handlers"
-	"kseli-server/middleware"
+	"kseli-server/handlers/middleware"
+	"kseli-server/handlers/utils"
+	"kseli-server/services"
 	"kseli-server/storage"
 )
 
 func main() {
 	config.LoadConfig()
 
-	storage := storage.NewMemoryStore()
+	st := storage.InitializeStorage()
+	rs := services.NewRoomService(st)
+
 	mux := http.NewServeMux()
 
 	appDir := "../builds/client"
 	fileServer := http.FileServer(http.Dir(appDir))
 
-	// POST request to create a chat room, auth using API key
+	// POST request to create a chat room
 	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
-		handlers.CreateRoomHandler(storage),
+		handlers.CreateRoomHandler(rs),
+		middleware.ValidateSessionID(),
 		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))
 
-	// GET request to get chat room details, using Auth token
+	// POST request for a user to join a chat room
+	mux.Handle("POST /api/rooms/{roomID}/join", middleware.WithMiddleware(
+		handlers.JoinRoomHandler(rs),
+		middleware.ValidateSessionID(),
+		middleware.ValidateAPIKey(),
+		middleware.ValidateOrigin(),
+	))
+
+	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
-		handlers.GetRoomHandler(storage),
+		handlers.GetRoomHandler(rs),
 		middleware.ValidateAuthToken(),
-		middleware.ValidateOrigin(),
-	))
-
-	// POST request for a user to join a chat room, auth using API key
-	mux.Handle("POST /api/rooms/{roomID}/users", middleware.WithMiddleware(
-		handlers.JoinRoomHandler(storage),
-		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
-			handlers.WriteJSONError(w, http.StatusNotFound, "Resource Not Found.", nil)
+			utils.WriteSimpleErrorMessage(w, http.StatusNotFound, "Resource Not Found.")
 			return
 		}
 

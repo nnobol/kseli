@@ -10,83 +10,86 @@ import (
 	"strings"
 	"time"
 
+	"kseli-server/config"
 	"kseli-server/models"
 )
 
-var CreateTokenFunc = createToken
+// Precomputed Base64-encoded JWT header: {"alg":"HS256","typ":"JWT"}
+const header = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
-type Claims struct {
-	UserID string      `json:"userId"`
-	RoomID string      `json:"roomId"`
-	Role   models.Role `json:"role"`
-	Exp    int64       `json:"exp"`
-}
+func CreateToken(claims models.Claims) (string, error) {
+	secretKey := config.GlobalConfig.SecretKey
 
-var header = base64URLEncode([]byte(`{"alg":"HS256","typ":"JWT"}`))
-
-// createToken creates a JWT string signed with HS256.
-func createToken(claims Claims, secretKey string) (string, error) {
-	// 1. Marshal the claims to JSON
+	// Step 1: Serialize claims to JSON
 	payloadBytes, err := json.Marshal(claims)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal claims: %w", err)
 	}
 
-	// 2. Base64URL-encode the payload
+	// Step 2: Encode the payload to Base64 URL format
 	payload := base64URLEncode(payloadBytes)
 
-	// 3. Concatenate header + "." + payload
+	// Step 3: Construct the unsigned token (header + payload)
 	unsignedToken := header + "." + payload
 
-	// 4. Sign with HMAC-SHA256
+	// Step 4: Compute the HMAC-SHA256 signature of the token
 	signatureBytes := signHMACSHA256(unsignedToken, secretKey)
 
-	// 5. Base64URL-encode the signature
+	// Step 5: Encode the signature in Base64 URL format
 	signature := base64URLEncode(signatureBytes)
 
-	// 6. Return "header.payload.signature" as a token string
+	// Step 6: Return the final JWT token (header.payload.signature)
 	return unsignedToken + "." + signature, nil
 }
 
-func ValidateToken(token string, secretKey string) (Claims, error) {
-	var claims Claims
+func ValidateToken(token string) (models.Claims, error) {
+	var claims models.Claims
+	secretKey := config.GlobalConfig.SecretKey
 
-	// 1. Split the token into 3 parts
+	// Step 1: Split the token into header, payload, and signature
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return claims, errors.New("invalid token format")
 	}
 
-	headerB64 := parts[0]
-	payloadB64 := parts[1]
-	signatureB64 := parts[2]
+	unsignedToken, signatureB64 := parts[0]+"."+parts[1], parts[2]
 
-	// 2. Recompute the signature from header + payload
-	unsignedToken := headerB64 + "." + payloadB64
-	expectedSig := signHMACSHA256(unsignedToken, secretKey)
+	// Step 2: Compute the expected signature for verification
+	expectedSignature := signHMACSHA256(unsignedToken, secretKey)
 
-	// 3. Base64URL-decode the signature from the token
+	// Step 3: Decode and compare the signature
 	signatureBytes, err := base64URLDecode(signatureB64)
-	if err != nil {
-		return claims, errors.New("invalid signature encoding")
-	}
-
-	// 4. Compare the recomputed signature with the token’s signature
-	if !hmac.Equal(expectedSig, signatureBytes) {
+	if err != nil || !hmac.Equal(expectedSignature, signatureBytes) {
 		return claims, errors.New("signature mismatch")
 	}
 
-	// 5. Decode the payload into the Claims struct
-	payloadBytes, err := base64URLDecode(payloadB64)
+	// Step 4: Decode the Base64-encoded payload
+	payloadBytes, err := base64URLDecode(parts[1])
 	if err != nil {
 		return claims, errors.New("invalid payload encoding")
 	}
 
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+	// Step 5: Unmarshal the payload into a temporary struct to handle float64 issue
+	var temp struct {
+		UserID float64 `json:"userId"`
+		RoomID string  `json:"roomId"`
+		Role   float64 `json:"role"`
+		Exp    int64   `json:"exp"`
+	}
+
+	if err := json.Unmarshal(payloadBytes, &temp); err != nil {
 		return claims, errors.New("failed to parse claims")
 	}
 
-	// 6. Check the expiration time
+	// Step 6: Convert UserID & Role from float64 to uint8
+	claims = models.Claims{
+		UserID: uint8(temp.UserID),
+		RoomID: temp.RoomID,
+		Role:   models.Role(uint8(temp.Role)),
+		Exp:    temp.Exp,
+	}
+
+	// Step 7: Check if the token has expired
 	if time.Now().Unix() > claims.Exp {
 		return claims, errors.New("token has expired")
 	}
@@ -94,23 +97,16 @@ func ValidateToken(token string, secretKey string) (Claims, error) {
 	return claims, nil
 }
 
-// signHMACSHA256 returns the HMAC-SHA256 signature of a message.
 func signHMACSHA256(message, secretKey string) []byte {
 	mac := hmac.New(sha256.New, []byte(secretKey))
 	mac.Write([]byte(message))
 	return mac.Sum(nil)
 }
 
-// base64URLEncode encodes a byte slice to a Base64 URL-encoded string without padding.
 func base64URLEncode(data []byte) string {
-	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
+	return base64.RawURLEncoding.EncodeToString(data)
 }
 
-// base64URLDecode decodes a Base64 URL-encoded string (no padding).
 func base64URLDecode(s string) ([]byte, error) {
-	// Re-pad the string if necessary
-	padding := (4 - len(s)%4) % 4
-	s += strings.Repeat("=", padding)
-
-	return base64.URLEncoding.DecodeString(s)
+	return base64.RawURLEncoding.DecodeString(s)
 }
