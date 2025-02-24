@@ -25,22 +25,16 @@
     }
   }
 
-  function trapFocus() {
+  function trapFocus(e: FocusEvent) {
     if (!modal) return;
-
-    const focusedElement = document.activeElement;
-    if (!modal.contains(focusedElement)) {
+    const nextFocusedElement = e.relatedTarget as Node | null;
+    if (nextFocusedElement && !modal.contains(nextFocusedElement)) {
       modal.focus();
     }
   }
 
   onMount(() => {
     modal?.focus();
-
-    document.addEventListener("focusin", trapFocus);
-    return () => {
-      document.removeEventListener("focusin", trapFocus);
-    };
   });
 </script>
 
@@ -51,6 +45,7 @@
   bind:this={modal}
   onkeydown={handleKeyDown}
   onclick={handleBackdropClick}
+  onfocusout={trapFocus}
   transition:fade={{ duration: 200 }}
   tabindex="0"
   role="dialog"

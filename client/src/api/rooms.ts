@@ -1,3 +1,8 @@
+export interface RoomErrorResponse {
+    errorMessage?: string;
+    fieldErrors?: Record<string, string>;
+}
+
 export interface CreateRoomPayload {
     username: string;
     maxParticipants: number;
@@ -8,18 +13,18 @@ export interface CreateRoomOkResponse {
     token: string;
 }
 
-export interface RoomErrorResponse {
-    errorMessage: string;
-    fieldErrors?: Record<string, string>;
-}
-
 export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoomOkResponse> {
     try {
+        const sessionId = getSessionId();
+        const fingerprint = getFingerprint();
+
         const response = await fetch('/api/rooms', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-KEY': import.meta.env.VITE_API_KEY
+                'X-Api-Key': import.meta.env.VITE_API_KEY,
+                'X-Session-Id': sessionId,
+                'X-Fingerprint': fingerprint
             },
             body: JSON.stringify(payload),
         });
@@ -48,16 +53,22 @@ export interface JoinRoomPayload {
 }
 
 export interface JoinRoomOkResponse {
+    roomId: string;
     token: string;
 }
 
 export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promise<JoinRoomOkResponse> {
     try {
-        const response = await fetch(`/api/rooms/${roomId}/users`, {
+        const sessionId = getSessionId();
+        const fingerprint = getFingerprint();
+
+        const response = await fetch(`/api/rooms/${roomId}/join`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-KEY': import.meta.env.VITE_API_KEY
+                'X-Api-Key': import.meta.env.VITE_API_KEY,
+                'X-Session-Id': sessionId,
+                'X-Fingerprint': fingerprint
             },
             body: JSON.stringify(payload),
         });
@@ -78,4 +89,67 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
 
         throw err as RoomErrorResponse;
     }
+}
+
+function generateSessionId() {
+    return crypto.randomUUID()
+}
+
+function generateFingerprint() {
+    const components = [
+        navigator.userAgent,
+        navigator.hardwareConcurrency,
+        navigator.maxTouchPoints,
+        screen.width,
+        screen.height,
+        new Date().getTimezoneOffset()
+    ];
+
+    console.log(components)
+
+    return hashFNV32(components.join("."));
+}
+
+function hashFNV32(input: string) {
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16);
+}
+
+function getFingerprint() {
+    const storedFingerprint = getFromLocalStorage("fingerprint");
+    if (storedFingerprint) return storedFingerprint;
+
+    const fingerprint = generateFingerprint();
+    setInLocalStorage("fingerprint", fingerprint, 30);
+    return fingerprint;
+}
+
+function getSessionId() {
+    const storedSessionId = getFromLocalStorage("sessionId");
+    if (storedSessionId) return storedSessionId;
+
+    const sessionId = generateSessionId();
+    setInLocalStorage("sessionId", sessionId, 30);
+    return sessionId;
+}
+
+function setInLocalStorage(key: string, value: string, days: number) {
+    const expiryTime = new Date().getTime() + days * 24 * 60 * 60 * 1000;
+    localStorage.setItem(key, JSON.stringify({ value, expiry: expiryTime }));
+}
+
+function getFromLocalStorage(key: string): string | null {
+    const item = localStorage.getItem(key);
+    if (!item) return null;
+
+    const { value, expiry } = JSON.parse(item);
+    if (new Date().getTime() > expiry) {
+        localStorage.removeItem(key);
+        return null;
+    }
+    return value;
 }

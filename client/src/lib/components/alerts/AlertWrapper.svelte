@@ -10,27 +10,27 @@
 
     let alert: HTMLDivElement | null = null;
 
-    function trapFocus() {
+    function trapFocus(e: FocusEvent) {
         if (!alert) return;
-
-        const focusedElement = document.activeElement;
-        if (!alert.contains(focusedElement)) {
+        const nextFocusedElement = e.relatedTarget as Node | null;
+        if (nextFocusedElement && !alert.contains(nextFocusedElement)) {
             alert.focus();
         }
     }
 
     onMount(() => {
         alert?.focus();
-
-        document.addEventListener("focusin", trapFocus);
-        return () => {
-            document.removeEventListener("focusin", trapFocus);
-        };
     });
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex  - -->
-<div class="alert" bind:this={alert} tabindex="0" role="alert">
+<div
+    class="alert"
+    bind:this={alert}
+    onfocusout={trapFocus}
+    tabindex="0"
+    role="alertdialog"
+>
     {@render content()}
 </div>
 

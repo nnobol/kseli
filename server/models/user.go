@@ -1,8 +1,10 @@
 package models
 
 type sessionIDContextKey string
+type fingerprintContextKey string
 
 const UserSessionIDKey sessionIDContextKey = "sessionId"
+const UserFingerprintKey fingerprintContextKey = "fingerprint"
 
 type Role uint8
 
@@ -12,8 +14,9 @@ const (
 )
 
 type User struct {
-	SessionId string
-	ID        uint8  `json:"id"`
-	Username  string `json:"username"`
-	Role      Role   `json:"role"`
+	SessionId   string
+	Fingerprint string
+	ID          uint8  `json:"id"`
+	Username    string `json:"username"`
+	Role        Role   `json:"role"`
 }

@@ -28,11 +28,21 @@
     </h1>
 
     <div class="button-container">
-        <button class="join-chat-room" onclick={openJoinModal}>
+        <button
+            class="join-chat-room"
+            onclick={() => {
+                if (!isCreateModalOpen) openJoinModal();
+            }}
+        >
             Join Chat Room
         </button>
 
-        <button class="create-chat-room" onclick={openCreateModal}>
+        <button
+            class="create-chat-room"
+            onclick={() => {
+                if (!isJoinModalOpen) openCreateModal();
+            }}
+        >
             Create Chat Room
         </button>
     </div>

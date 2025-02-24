@@ -21,7 +21,7 @@ func NewRoomService(s *storage.MainStorage) *RoomService {
 	}
 }
 
-func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessionID string) (*api.CreateRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessionID string, fingerprint string) (*api.CreateRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 2)
 
 	validateUsername(username, fieldErrors)
@@ -35,10 +35,11 @@ func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessio
 	}
 
 	adminUser := &models.User{
-		SessionId: sessionID,
-		ID:        1,
-		Username:  username,
-		Role:      models.Admin,
+		SessionId:   sessionID,
+		Fingerprint: fingerprint,
+		ID:          1,
+		Username:    username,
+		Role:        models.Admin,
 	}
 
 	roomID := rs.s.CreateRoom(adminUser, maxParticipants)
@@ -65,7 +66,7 @@ func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessio
 	}, nil
 }
 
-func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string, sessionID string) (*api.JoinRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string, sessionID string, fingerprint string) (*api.JoinRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 3)
 
 	validateRoomId(roomID, fieldErrors)
@@ -118,10 +119,11 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 	room.Mu.Unlock()
 
 	user := &models.User{
-		SessionId: sessionID,
-		ID:        userId,
-		Username:  username,
-		Role:      models.Member,
+		SessionId:   sessionID,
+		Fingerprint: fingerprint,
+		ID:          userId,
+		Username:    username,
+		Role:        models.Member,
 	}
 
 	room.Join(user)
