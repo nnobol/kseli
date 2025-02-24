@@ -21,9 +21,20 @@ func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http
 }
 
 func ValidateOrigin() func(http.Handler) http.Handler {
+	allowedOrigins := map[string]bool{
+		"localhost:8080": true,
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			origin := r.Header.Get("Origin")
+			var origin string
+
+			if r.Method == "GET" {
+				origin = r.Header.Get("X-Origin")
+			} else {
+				origin = r.Header.Get("Origin")
+			}
+
 			if origin == "" {
 				utils.WriteSimpleErrorMessage(w, http.StatusForbidden, "Missing Origin header")
 				return
@@ -35,7 +46,7 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 				return
 			}
 
-			if originURL.Host != r.Host {
+			if !allowedOrigins[originURL.Host] {
 				utils.WriteSimpleErrorMessage(w, http.StatusForbidden, "Origin does not match the requested host")
 				return
 			}

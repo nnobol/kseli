@@ -101,7 +101,7 @@
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 
-            errorMessage = error.errorMessage;
+            errorMessage = error.errorMessage || "";
             fieldErrors = error.fieldErrors || {};
         } finally {
             loading = false;

@@ -1,10 +1,11 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
     import FloatingInputField from "../fields/FloatingInputField.svelte";
     import RadioFieldMaxParticipants from "../fields/RadioFieldMaxParticipants.svelte";
     import ErrorAlert from "../alerts/ErrorAlert.svelte";
-    import { createRoom } from "../../../api/rooms";
+    import { createRoom, setTokenInLocalStorage } from "../../../api/rooms";
     import type {
         CreateRoomPayload,
         RoomErrorResponse,
@@ -80,12 +81,13 @@
 
         try {
             const response = await createRoom(payload);
-            // Handle success (e.g., redirect or update the UI)
+            setTokenInLocalStorage(response.token, 1);
+            goto(`/room/${response.roomId}`);
             console.log("Room created successfully:", response.roomId);
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 
-            errorMessage = error.errorMessage;
+            errorMessage = error.errorMessage || "";
             fieldErrors = error.fieldErrors || {};
         } finally {
             loading = false;

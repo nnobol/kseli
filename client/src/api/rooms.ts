@@ -1,4 +1,5 @@
 export interface RoomErrorResponse {
+    statusCode?: number;
     errorMessage?: string;
     fieldErrors?: Record<string, string>;
 }
@@ -53,7 +54,6 @@ export interface JoinRoomPayload {
 }
 
 export interface JoinRoomOkResponse {
-    roomId: string;
     token: string;
 }
 
@@ -89,6 +89,71 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
 
         throw err as RoomErrorResponse;
     }
+}
+
+interface User {
+    id: number;
+    username: string;
+    role: number;
+}
+
+export interface GetRoomOkResponse {
+    maxParticipants: number;
+    participants: User[];
+    secretKey?: string;
+}
+
+export async function getRoom(roomId: string): Promise<GetRoomOkResponse> {
+    try {
+        const token = getTokenFromLocalStorage();
+        const origin = window.location.origin;
+
+        const response = await fetch(`/api/rooms/${roomId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-Origin': origin
+            }
+        });
+
+        const responseBody = await response.json();
+
+        if (!response.ok) {
+            throw {
+                ...responseBody,
+                statusCode: response.status,
+            } as RoomErrorResponse;
+        }
+
+        return responseBody as GetRoomOkResponse;
+    } catch (err) {
+        if (err instanceof Error) {
+            throw {
+                errorMessage: "An unexpected server error occurred. Please try again later.",
+                statusCode: 500,
+            } as RoomErrorResponse;
+        }
+
+        throw err as RoomErrorResponse;
+    }
+}
+
+export function setTokenInLocalStorage(token: string, hours: number) {
+    const expiryTime = new Date().getTime() + hours * 60 * 60 * 1000;
+    localStorage.setItem("roomToken", JSON.stringify({ value: token, expiry: expiryTime }));
+}
+
+export function getTokenFromLocalStorage(): string | null {
+    const item = localStorage.getItem("roomToken");
+    if (!item) return null;
+
+    const { value, expiry } = JSON.parse(item);
+    if (new Date().getTime() > expiry) {
+        localStorage.removeItem("roomToken");
+        return null;
+    }
+    return value;
 }
 
 function generateSessionId() {

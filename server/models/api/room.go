@@ -18,8 +18,7 @@ type CreateRoomResponse struct {
 }
 
 type JoinRoomResponse struct {
-	RoomID string `json:"roomId"`
-	Token  string `json:"token"`
+	Token string `json:"token"`
 }
 
 type GetRoomResponse struct {

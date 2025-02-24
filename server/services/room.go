@@ -145,29 +145,16 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 	}
 
 	return &api.JoinRoomResponse{
-		RoomID: room.RoomID,
-		Token:  token,
+		Token: token,
 	}, nil
 }
 
 func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.GetRoomResponse, *api.ErrorResponse) {
-	fieldErrors := make(map[string]string, 1)
-
-	validateRoomId(roomID, fieldErrors)
-
-	if len(fieldErrors) > 0 {
-		return nil, &api.ErrorResponse{
-			StatusCode:  http.StatusBadRequest,
-			FieldErrors: fieldErrors,
-		}
-	}
-
 	room, exists := rs.s.GetRoom(roomID)
 	if !exists {
-		fieldErrors["roomId"] = "Chat Room not found."
 		return nil, &api.ErrorResponse{
-			StatusCode:  http.StatusBadRequest,
-			FieldErrors: fieldErrors,
+			StatusCode:   http.StatusNotFound,
+			ErrorMessage: "Chat Room not found.",
 		}
 	}
 
