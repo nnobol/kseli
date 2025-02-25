@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -23,7 +22,7 @@ func CreateToken(claims models.Claims) (string, error) {
 	// Step 1: Serialize claims to JSON
 	payloadBytes, err := json.Marshal(claims)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal claims: %w", err)
+		return "", errors.New("failed to marshal claims")
 	}
 
 	// Step 2: Encode the payload to Base64 URL format

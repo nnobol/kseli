@@ -1,6 +1,7 @@
 <script lang="ts">
     import CreateChatRoomModal from "$lib/components/modals/CreateChatRoomModal.svelte";
     import JoinChatRoomModal from "$lib/components/modals/JoinChatRoomModal.svelte";
+    import Footer from "$lib/Footer.svelte";
 
     let isCreateModalOpen: boolean = false;
     let isJoinModalOpen: boolean = false;
@@ -55,6 +56,8 @@
         <JoinChatRoomModal closeModal={closeJoinModal} />
     {/if}
 </main>
+
+<Footer isErrorPage={false} />
 
 <style>
     main {

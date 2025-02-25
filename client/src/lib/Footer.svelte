@@ -1,6 +1,13 @@
-<footer>
+<script lang="ts">
+    let { isErrorPage }: { isErrorPage: boolean } = $props();
+</script>
+
+<footer class:error={isErrorPage}>
     <a href="https://github.com/NikolozOboladze" target="_blank" rel="noopener">
-        <img src="/github-icon.svg" alt="GitHub logo" />
+        <img
+            src={isErrorPage ? "/github-icon-error.svg" : "/github-icon.svg"}
+            alt="GitHub logo"
+        />
     </a>
 </footer>
 
@@ -15,6 +22,11 @@
         justify-content: flex-end;
         align-items: center;
         user-select: none;
+    }
+
+    footer.error {
+        background-color: #ffe4e4;
+        border-top: 2px solid #ffa9a9;
     }
 
     footer a img {

@@ -5,13 +5,8 @@
 </script>
 
 <main>
-    {#if page.status === 404}
-        <h1>404 - Page Not Found</h1>
-        <p>Route '{page.url.pathname}' doesn’t exist.</p>
-    {:else}
-        <h1>Error {page.status || 500}</h1>
-        <p>{page.error?.message || "Something went wrong"}</p>
-    {/if}
+    <h1>Error {page.status}</h1>
+    <p>{page.error?.message || "Something went wrong"}</p>
     <button on:click={() => goto("/")}>Go Home</button>
 </main>
 
