@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types'
-import { getRoom } from '../../../api/rooms';
+import { getRoom } from '$lib/api/rooms';
 import { error } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ params }) => {

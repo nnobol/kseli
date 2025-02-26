@@ -5,12 +5,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"kseli-server/config"
 	"kseli-server/handlers"
 	"kseli-server/handlers/middleware"
-	"kseli-server/handlers/utils"
 	"kseli-server/services"
 	"kseli-server/storage"
 )
@@ -52,11 +50,6 @@ func main() {
 	))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") {
-			utils.WriteSimpleErrorMessage(w, http.StatusNotFound, "Resource Not Found.")
-			return
-		}
-
 		requestRoute := filepath.Join(appDir, r.URL.Path)
 
 		_, err := os.Stat(requestRoute)

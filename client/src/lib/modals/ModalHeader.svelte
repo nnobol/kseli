@@ -1,6 +1,6 @@
 <script lang="ts">
-    import CloseButton from "../buttons/CloseButton.svelte";
-    import { CloseButtonTypes } from "../buttons/closeButtonTypes";
+    import CloseButton from "./buttons/CloseButton.svelte";
+    import { CloseButtonTypes } from "./buttons/types";
 
     interface Props {
         headerTitle: string;

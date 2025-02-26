@@ -1,6 +1,6 @@
 <script lang="ts">
     import ModalHeader from "./ModalHeader.svelte";
-    import SubmitButton from "../buttons/SubmitButton.svelte";
+    import SubmitButton from "./buttons/SubmitButton.svelte";
     import { scale } from "svelte/transition";
     import type { Snippet } from "svelte";
 

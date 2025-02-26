@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CloseButtonTypes } from "./closeButtonTypes";
+    import { CloseButtonTypes } from "./types";
 
     interface Props {
         onClick: () => void;

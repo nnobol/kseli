@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
-    import Footer from "$lib/Footer.svelte";
+    import Footer from "$lib/common/Footer.svelte";
 </script>
 
 <main>

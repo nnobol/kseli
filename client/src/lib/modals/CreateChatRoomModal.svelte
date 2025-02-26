@@ -2,14 +2,11 @@
     import { goto } from "$app/navigation";
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
-    import FloatingInputField from "../fields/FloatingInputField.svelte";
-    import RadioFieldMaxParticipants from "../fields/RadioFieldMaxParticipants.svelte";
-    import ErrorAlert from "../alerts/ErrorAlert.svelte";
-    import { createRoom, setTokenInLocalStorage } from "../../../api/rooms";
-    import type {
-        CreateRoomPayload,
-        RoomErrorResponse,
-    } from "../../../api/rooms";
+    import FloatingInputField from "./fields/FloatingInputField.svelte";
+    import RadioFieldMaxParticipants from "./fields/RadioFieldMaxParticipants.svelte";
+    import ErrorAlert from "./error-alert/ErrorAlert.svelte";
+    import { createRoom, setTokenInLocalStorage } from "../api/rooms";
+    import type { CreateRoomPayload, RoomErrorResponse } from "../api/rooms";
 
     interface Props {
         closeModal: () => void;

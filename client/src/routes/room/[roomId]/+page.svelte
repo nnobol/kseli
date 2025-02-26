@@ -1,8 +1,14 @@
 <script lang="ts">
+    import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
+
     let { data } = $props();
 
     function getRoleIcon(role: number) {
         return role === 1 ? "/admin-icon.svg" : "/user-icon.svg";
+    }
+
+    function getRoleTitle(role: number) {
+        return role === 1 ? "Admin" : "User";
     }
 </script>
 
@@ -34,21 +40,32 @@
             <ul>
                 {#each data.participants as participant}
                     <li class="participant-item">
-                        <img
-                            class="role-icon"
-                            src={getRoleIcon(participant.role)}
-                            alt="Role Icon"
-                        />
+                        <TooltipWrapper
+                            content={getRoleTitle(participant.role)}
+                        >
+                            <img
+                                class="role-icon"
+                                src={getRoleIcon(participant.role)}
+                                alt="Role Icon"
+                            />
+                        </TooltipWrapper>
                         <span>{participant.username}</span>
 
                         {#if data.userRole === 1 && participant.role !== 1}
                             <div class="admin-buttons">
-                                <button class="admin-btn kick">
-                                    <img src="/kick-icon.svg" alt="Kick" />
-                                </button>
-                                <button class="admin-btn ban">
-                                    <img src="/ban-icon.svg" alt="Ban" />
-                                </button>
+                                <TooltipWrapper content="Kick User">
+                                    <button
+                                        class="admin-btn kick"
+                                        title="Kick User"
+                                    >
+                                        <img src="/kick-icon.svg" alt="Kick" />
+                                    </button>
+                                </TooltipWrapper>
+                                <TooltipWrapper content="Ban User">
+                                    <button class="admin-btn ban">
+                                        <img src="/ban-icon.svg" alt="Ban" />
+                                    </button>
+                                </TooltipWrapper>
                             </div>
                         {/if}
                     </li>
@@ -125,6 +142,10 @@
         cursor: pointer;
     }
 
+    .message-input button:hover {
+        opacity: 0.8;
+    }
+
     /* Right Side: Participants */
     .participants {
         display: flex;
@@ -175,6 +196,10 @@
         border: none;
         cursor: pointer;
         padding: 0;
+    }
+
+    .admin-btn:hover {
+        transform: scale(1.1);
     }
 
     .admin-btn img {

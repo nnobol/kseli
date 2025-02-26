@@ -1,14 +1,24 @@
 <script lang="ts">
+    import TooltipWrapper from "./TooltipWrapper.svelte";
+
     let { isErrorPage }: { isErrorPage: boolean } = $props();
 </script>
 
 <footer class:error={isErrorPage}>
-    <a href="https://github.com/NikolozOboladze" target="_blank" rel="noopener">
-        <img
-            src={isErrorPage ? "/github-icon-error.svg" : "/github-icon.svg"}
-            alt="GitHub logo"
-        />
-    </a>
+    <TooltipWrapper content="Come Check Me Out ;)">
+        <a
+            href="https://github.com/NikolozOboladze"
+            target="_blank"
+            rel="noopener"
+        >
+            <img
+                src={isErrorPage
+                    ? "/github-icon-error.svg"
+                    : "/github-icon.svg"}
+                alt="GitHub logo"
+            />
+        </a>
+    </TooltipWrapper>
 </footer>
 
 <style>

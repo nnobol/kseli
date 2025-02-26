@@ -1,13 +1,10 @@
 <script lang="ts">
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
-    import FloatingInputField from "../fields/FloatingInputField.svelte";
-    import ErrorAlert from "../alerts/ErrorAlert.svelte";
-    import { joinRoom } from "../../../api/rooms";
-    import type {
-        JoinRoomPayload,
-        RoomErrorResponse,
-    } from "../../../api/rooms";
+    import FloatingInputField from "./fields/FloatingInputField.svelte";
+    import ErrorAlert from "./error-alert/ErrorAlert.svelte";
+    import { joinRoom } from "../api/rooms";
+    import type { JoinRoomPayload, RoomErrorResponse } from "../api/rooms";
 
     interface Props {
         closeModal: () => void;

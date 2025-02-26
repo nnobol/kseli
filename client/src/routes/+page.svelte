@@ -1,7 +1,7 @@
 <script lang="ts">
-    import CreateChatRoomModal from "$lib/components/modals/CreateChatRoomModal.svelte";
-    import JoinChatRoomModal from "$lib/components/modals/JoinChatRoomModal.svelte";
-    import Footer from "$lib/Footer.svelte";
+    import CreateChatRoomModal from "$lib/modals/CreateChatRoomModal.svelte";
+    import JoinChatRoomModal from "$lib/modals/JoinChatRoomModal.svelte";
+    import Footer from "$lib/common/Footer.svelte";
 
     let isCreateModalOpen: boolean = false;
     let isJoinModalOpen: boolean = false;

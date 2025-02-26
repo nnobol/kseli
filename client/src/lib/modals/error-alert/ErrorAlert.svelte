@@ -1,7 +1,7 @@
 <script lang="ts">
     import AlertWrapper from "./AlertWrapper.svelte";
     import CloseButton from "../buttons/CloseButton.svelte";
-    import { CloseButtonTypes } from "../buttons/closeButtonTypes";
+    import { CloseButtonTypes } from "../buttons/types";
 
     interface Props {
         errorMessage: string;
