@@ -14,8 +14,8 @@ const (
 )
 
 type User struct {
-	SessionId   string
-	Fingerprint string
+	SessionId   string `json:"-"`
+	Fingerprint string `json:"-"`
 	ID          uint8  `json:"id"`
 	Username    string `json:"username"`
 	Role        Role   `json:"role"`

@@ -22,6 +22,7 @@ type JoinRoomResponse struct {
 }
 
 type GetRoomResponse struct {
+	UserRole        models.Role   `json:"userRole"`
 	MaxParticipants uint8         `json:"maxParticipants"`
 	Participants    []models.User `json:"participants"`
 	SecretKey       string        `json:"secretKey,omitempty"`

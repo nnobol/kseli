@@ -98,6 +98,7 @@ interface User {
 }
 
 export interface GetRoomOkResponse {
+    userRole: number;
     maxParticipants: number;
     participants: User[];
     secretKey?: string;
@@ -169,8 +170,6 @@ function generateFingerprint() {
         screen.height,
         new Date().getTimezoneOffset()
     ];
-
-    console.log(components)
 
     return hashFNV32(components.join("."));
 }

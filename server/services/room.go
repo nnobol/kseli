@@ -176,6 +176,7 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 	room.Mu.RUnlock()
 
 	return &api.GetRoomResponse{
+		UserRole:        userClaims.Role,
 		MaxParticipants: room.MaxParticipants,
 		Participants:    participants,
 		SecretKey:       secretKey,
