@@ -54,10 +54,7 @@
                         {#if data.userRole === 1 && participant.role !== 1}
                             <div class="admin-buttons">
                                 <TooltipWrapper content="Kick User">
-                                    <button
-                                        class="admin-btn kick"
-                                        title="Kick User"
-                                    >
+                                    <button class="admin-btn kick">
                                         <img src="/kick-icon.svg" alt="Kick" />
                                     </button>
                                 </TooltipWrapper>

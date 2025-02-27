@@ -91,7 +91,7 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
     }
 }
 
-interface User {
+export interface User {
     id: number;
     username: string;
     role: number;
