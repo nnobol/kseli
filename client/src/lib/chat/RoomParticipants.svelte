@@ -59,7 +59,7 @@
 <style>
     section {
         display: flex;
-        flex-grow: 1;
+        flex: 1;
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
@@ -85,6 +85,7 @@
     li {
         color: #24292f;
         display: flex;
+        justify-content: space-between;
         gap: 1rem;
         padding: 0.3rem;
     }

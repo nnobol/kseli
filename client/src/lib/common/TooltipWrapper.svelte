@@ -1,13 +1,13 @@
 <script lang="ts">
-    let {
-        content = "",
-        offset = 10,
-        children,
-    } = $props<{
+    import type { Snippet } from "svelte";
+
+    interface Props {
         content?: string;
         offset?: number;
-        children: () => void;
-    }>();
+        children: Snippet;
+    }
+
+    let { content = "", offset = 10, children }: Props = $props();
 
     let x = $state(0);
     let y = $state(0);

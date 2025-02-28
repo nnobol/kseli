@@ -1,19 +1,15 @@
 <script lang="ts">
-    import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
-
     interface Props {
-        secretKey: string;
+        secretKey?: string;
         currentUserRole: number;
     }
 
     let { secretKey, currentUserRole }: Props = $props();
 </script>
 
-<section>
+<div class="room-control">
     {#if currentUserRole == 1}
-        <TooltipWrapper content="Secret Key for joining the Room">
-            <p>Key: {secretKey}</p>
-        </TooltipWrapper>
+        <p>Key: {secretKey}</p>
     {/if}
     <div class="button-wrapper">
         <button>Leave Room</button>
@@ -21,18 +17,18 @@
             <button>Close Room</button>
         {/if}
     </div>
-</section>
+</div>
 
 <style>
-    section {
+    .room-control {
         display: flex;
-        flex-grow: 0;
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 0.5rem;
+        padding: 1rem;
         color: #24292f;
         background-color: #fff;
+        gap: 1rem;
     }
 
     p {
@@ -43,7 +39,6 @@
         display: flex;
         justify-content: center;
         gap: 0.35rem;
-        margin-top: 0.5rem;
     }
 
     button {

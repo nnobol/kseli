@@ -1,12 +1,13 @@
 import type { PageLoad } from './$types'
 import { getRoom } from '$lib/api/rooms';
+import type { GetRoomOkResponse } from '$lib/api/rooms';
 import { error } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ params }) => {
     try {
         const roomId = params.roomId;
         // const roomDetails = await getRoom(roomId);
-        const roomDetails = {
+        const roomDetails: GetRoomOkResponse = {
             "userRole": 1,
             "maxParticipants": 4,
             "participants": [
