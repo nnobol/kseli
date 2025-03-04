@@ -1,11 +1,11 @@
 <script lang="ts">
     import RoomParticipants from "./RoomParticipants.svelte";
     import RoomControl from "./RoomControl.svelte";
-    import type { User } from "$lib/api/rooms";
+    import type { Participant } from "$lib/api/rooms";
 
     interface Props {
         currentUserRole: number;
-        participants: User[];
+        participants: Participant[];
         maxParticipants: number;
         secretKey?: string;
     }

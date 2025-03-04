@@ -28,7 +28,7 @@ func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) 
 		RoomID:          roomID,
 		MaxParticipants: maxParticipants,
 		SecretKey:       &roomSecretKey,
-		Participants:    make(map[string]*models.User),
+		Participants:    make(map[string]*models.User, maxParticipants),
 	}
 
 	room.Participants[adminUser.Username] = adminUser

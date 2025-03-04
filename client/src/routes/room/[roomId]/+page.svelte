@@ -1,10 +1,20 @@
 <script lang="ts">
+    import { onMount, onDestroy } from "svelte";
     import ChatRoom from "$lib/chat/ChatRoom.svelte";
-    import { initializeChatStore } from "$lib/chat/chatStore";
+    import {
+        initializeChatStore,
+        disconnectChatStore,
+    } from "$lib/chat/chatStore";
 
     let { data } = $props();
 
-    initializeChatStore();
+    onMount(() => {
+        initializeChatStore(data.participants);
+    });
+
+    onDestroy(() => {
+        disconnectChatStore();
+    });
 </script>
 
 <ChatRoom {data} />

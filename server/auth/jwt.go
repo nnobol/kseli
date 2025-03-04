@@ -70,10 +70,11 @@ func ValidateToken(token string) (models.Claims, error) {
 
 	// Step 5: Unmarshal the payload into a temporary struct to handle float64 issue
 	var temp struct {
-		UserID float64 `json:"userId"`
-		RoomID string  `json:"roomId"`
-		Role   float64 `json:"role"`
-		Exp    int64   `json:"exp"`
+		UserID   float64 `json:"userId"`
+		Username string  `json:"username"`
+		Role     float64 `json:"role"`
+		RoomID   string  `json:"roomId"`
+		Exp      int64   `json:"exp"`
 	}
 
 	if err := json.Unmarshal(payloadBytes, &temp); err != nil {
@@ -82,10 +83,11 @@ func ValidateToken(token string) (models.Claims, error) {
 
 	// Step 6: Convert UserID & Role from float64 to uint8
 	claims = models.Claims{
-		UserID: uint8(temp.UserID),
-		RoomID: temp.RoomID,
-		Role:   models.Role(uint8(temp.Role)),
-		Exp:    temp.Exp,
+		UserID:   uint8(temp.UserID),
+		Username: temp.Username,
+		Role:     models.Role(uint8(temp.Role)),
+		RoomID:   temp.RoomID,
+		Exp:      temp.Exp,
 	}
 
 	// Step 7: Check if the token has expired

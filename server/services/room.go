@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"kseli-server/models"
 	"kseli-server/models/api"
 	"kseli-server/storage"
+
+	"github.com/coder/websocket"
 )
 
 type RoomService struct {
@@ -21,7 +24,7 @@ func NewRoomService(s *storage.MainStorage) *RoomService {
 	}
 }
 
-func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessionID string, fingerprint string) (*api.CreateRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) CreateRoom(username, sessionID, fingerprint string, maxParticipants uint8) (*api.CreateRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 2)
 
 	validateUsername(username, fieldErrors)
@@ -45,10 +48,11 @@ func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessio
 	roomID := rs.s.CreateRoom(adminUser, maxParticipants)
 
 	claims := models.Claims{
-		UserID: adminUser.ID,
-		RoomID: roomID,
-		Role:   adminUser.Role,
-		Exp:    time.Now().Add(time.Hour).Unix(),
+		UserID:   adminUser.ID,
+		Username: adminUser.Username,
+		Role:     adminUser.Role,
+		RoomID:   roomID,
+		Exp:      time.Now().Add(time.Hour).Unix(),
 	}
 
 	token, err := auth.CreateToken(claims)
@@ -66,7 +70,7 @@ func (rs *RoomService) CreateRoom(username string, maxParticipants uint8, sessio
 	}, nil
 }
 
-func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string, sessionID string, fingerprint string) (*api.JoinRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID, fingerprint string) (*api.JoinRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 3)
 
 	validateRoomId(roomID, fieldErrors)
@@ -89,7 +93,9 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 		}
 	}
 
+	room.Mu.RLock()
 	if secretKey != *room.SecretKey {
+		room.Mu.RUnlock()
 		fieldErrors["roomSecretKey"] = "Incorrect Secret Key."
 		return nil, &api.ErrorResponse{
 			StatusCode:  http.StatusBadRequest,
@@ -97,7 +103,10 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 		}
 	}
 
+	// no need to lock for MaxParticipants, is an immutable field, won't be concurrently modified
+	// need to think of how to optimize
 	if uint8(len(room.Participants)) == room.MaxParticipants {
+		room.Mu.RUnlock()
 		fieldErrors["roomId"] = "Chat Room is full."
 		return nil, &api.ErrorResponse{
 			StatusCode:  http.StatusBadRequest,
@@ -106,17 +115,18 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 	}
 
 	if _, usernameTaken := room.Participants[username]; usernameTaken {
+		room.Mu.RUnlock()
 		fieldErrors["username"] = "This username is taken."
 		return nil, &api.ErrorResponse{
 			StatusCode:  http.StatusBadRequest,
 			FieldErrors: fieldErrors,
 		}
 	}
+	room.Mu.RUnlock()
 
 	room.Mu.Lock()
 	userId := room.NextUserId
 	room.NextUserId++
-	room.Mu.Unlock()
 
 	user := &models.User{
 		SessionId:   sessionID,
@@ -127,12 +137,15 @@ func (rs *RoomService) JoinRoom(roomID string, username string, secretKey string
 	}
 
 	room.Join(user)
+	room.Mu.Unlock()
 
+	// edge case: room might get deleted by some go routine and panic on room.RoomID
 	claims := models.Claims{
-		UserID: user.ID,
-		RoomID: room.RoomID,
-		Role:   user.Role,
-		Exp:    time.Now().Add(time.Hour).Unix(),
+		UserID:   user.ID,
+		Username: user.Username,
+		Role:     user.Role,
+		RoomID:   room.RoomID,
+		Exp:      time.Now().Add(time.Hour).Unix(),
 	}
 
 	token, err := auth.CreateToken(claims)
@@ -158,6 +171,7 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 		}
 	}
 
+	// edge case: room might get deleted by some go routine and panic on room.RoomID
 	if userClaims.RoomID != room.RoomID {
 		return nil, &api.ErrorResponse{
 			StatusCode:   http.StatusForbidden,
@@ -175,12 +189,25 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 	}
 	room.Mu.RUnlock()
 
+	// edge case: room might get deleted by some go routine and panic on room.MaxParticipants
 	return &api.GetRoomResponse{
 		UserRole:        userClaims.Role,
 		MaxParticipants: room.MaxParticipants,
 		Participants:    participants,
 		SecretKey:       secretKey,
 	}, nil
+}
+
+func (rs *RoomService) HandleWSConnection(ctx context.Context, roomID, username string, conn *websocket.Conn) {
+	room, exists := rs.s.GetRoom(roomID)
+	if !exists {
+		conn.Write(ctx, websocket.MessageText, []byte(`{"error": "internal error - room not found"}`))
+		conn.CloseNow()
+		return
+	}
+
+	// edge case: room might get deleted by some go routine before AddWSConnection locks
+	room.AddWSConnection(ctx, username, conn)
 }
 
 func validateRoomId(roomID string, fieldErrors map[string]string) {

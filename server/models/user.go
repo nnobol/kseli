@@ -1,5 +1,7 @@
 package models
 
+import "github.com/coder/websocket"
+
 type sessionIDContextKey string
 type fingerprintContextKey string
 
@@ -14,9 +16,11 @@ const (
 )
 
 type User struct {
-	SessionId   string `json:"-"`
-	Fingerprint string `json:"-"`
-	ID          uint8  `json:"id"`
-	Username    string `json:"username"`
-	Role        Role   `json:"role"`
+	SessionId    string          `json:"-"`
+	Fingerprint  string          `json:"-"`
+	ID           uint8           `json:"id"`
+	Username     string          `json:"username,omitempty"`
+	Role         Role            `json:"role,omitempty"`
+	WSConnection *websocket.Conn `json:"-"`
+	MessageQueue chan []byte     `json:"-"`
 }

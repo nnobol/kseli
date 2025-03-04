@@ -1,3 +1,5 @@
+import { getTokenFromLocalStorage } from "./utils";
+
 export interface RoomErrorResponse {
     statusCode?: number;
     errorMessage?: string;
@@ -91,7 +93,7 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
     }
 }
 
-export interface User {
+export interface Participant {
     id: number;
     username: string;
     role: number;
@@ -100,7 +102,7 @@ export interface User {
 export interface GetRoomOkResponse {
     userRole: number;
     maxParticipants: number;
-    participants: User[];
+    participants: Participant[];
     secretKey?: string;
 }
 
@@ -113,7 +115,7 @@ export async function getRoom(roomId: string): Promise<GetRoomOkResponse> {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                'Authorization': token!,
                 'X-Origin': origin
             }
         });
@@ -138,23 +140,6 @@ export async function getRoom(roomId: string): Promise<GetRoomOkResponse> {
 
         throw err as RoomErrorResponse;
     }
-}
-
-export function setTokenInLocalStorage(token: string, hours: number) {
-    const expiryTime = new Date().getTime() + hours * 60 * 60 * 1000;
-    localStorage.setItem("roomToken", JSON.stringify({ value: token, expiry: expiryTime }));
-}
-
-export function getTokenFromLocalStorage(): string | null {
-    const item = localStorage.getItem("roomToken");
-    if (!item) return null;
-
-    const { value, expiry } = JSON.parse(item);
-    if (new Date().getTime() > expiry) {
-        localStorage.removeItem("roomToken");
-        return null;
-    }
-    return value;
 }
 
 function generateSessionId() {

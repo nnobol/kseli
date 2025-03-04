@@ -45,9 +45,11 @@ func main() {
 	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
 		handlers.GetRoomHandler(rs),
-		middleware.ValidateAuthToken(),
+		middleware.ValidateTokenFromHeader(),
 		middleware.ValidateOrigin(),
 	))
+
+	mux.Handle("/ws/room", handlers.RoomWebSocketHandler(rs))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestRoute := filepath.Join(appDir, r.URL.Path)

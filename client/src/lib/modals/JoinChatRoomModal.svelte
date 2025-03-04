@@ -1,10 +1,12 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
     import FloatingInputField from "./fields/FloatingInputField.svelte";
     import ErrorAlert from "./error-alert/ErrorAlert.svelte";
-    import { joinRoom } from "../api/rooms";
-    import type { JoinRoomPayload, RoomErrorResponse } from "../api/rooms";
+    import { joinRoom } from "$lib/api/rooms";
+    import { setTokenInLocalStorage } from "$lib/api/utils";
+    import type { JoinRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
 
     interface Props {
         closeModal: () => void;
@@ -93,8 +95,8 @@
 
         try {
             const response = await joinRoom(roomId, payload);
-            // Handle success (e.g., redirect or update the UI)
-            console.log("Room joined successfully");
+            setTokenInLocalStorage(response.token, 1);
+            goto(`/room/${roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 

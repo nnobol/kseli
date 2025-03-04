@@ -5,8 +5,9 @@
     import FloatingInputField from "./fields/FloatingInputField.svelte";
     import RadioFieldMaxParticipants from "./fields/RadioFieldMaxParticipants.svelte";
     import ErrorAlert from "./error-alert/ErrorAlert.svelte";
-    import { createRoom, setTokenInLocalStorage } from "../api/rooms";
-    import type { CreateRoomPayload, RoomErrorResponse } from "../api/rooms";
+    import { createRoom } from "$lib/api/rooms";
+    import { setTokenInLocalStorage } from "$lib/api/utils";
+    import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
 
     interface Props {
         closeModal: () => void;
@@ -80,7 +81,6 @@
             const response = await createRoom(payload);
             setTokenInLocalStorage(response.token, 1);
             goto(`/room/${response.roomId}`);
-            console.log("Room created successfully:", response.roomId);
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 

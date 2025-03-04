@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"kseli-server/auth"
 	"kseli-server/config"
@@ -102,21 +101,14 @@ func ValidateFingerprint() func(http.Handler) http.Handler {
 	}
 }
 
-func ValidateAuthToken() func(http.Handler) http.Handler {
+func ValidateTokenFromHeader() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
+			token := r.Header.Get("Authorization")
+			if token == "" {
 				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Missing Authorization token.")
 				return
 			}
-
-			tokenParts := strings.Split(authHeader, " ")
-			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid Authorization format. Expected 'Bearer <token>'.")
-				return
-			}
-			token := tokenParts[1]
 
 			claims, err := auth.ValidateToken(token)
 			if err != nil {

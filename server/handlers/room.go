@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/coder/websocket"
+
+	"kseli-server/auth"
 	"kseli-server/handlers/utils"
 	"kseli-server/models"
 	"kseli-server/models/api"
@@ -31,7 +35,7 @@ func CreateRoomHandler(rs *services.RoomService) http.HandlerFunc {
 			return
 		}
 
-		resp, errResp := rs.CreateRoom(req.Username, req.MaxParticipants, sessionID, fingerprint)
+		resp, errResp := rs.CreateRoom(req.Username, sessionID, fingerprint, req.MaxParticipants)
 
 		if errResp != nil {
 			utils.WriteErrorResponse(w, errResp)
@@ -95,5 +99,32 @@ func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 		}
 
 		utils.WriteSuccessResponse(w, http.StatusCreated, resp)
+	}
+}
+
+func RoomWebSocketHandler(rs *services.RoomService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		token := r.URL.Query().Get("token")
+
+		if token == "" {
+			c.Write(r.Context(), websocket.MessageText, []byte(`{"error": "missing token"}`))
+			c.CloseNow()
+			return
+		}
+
+		claims, err := auth.ValidateToken(token)
+		if err != nil {
+			c.Write(r.Context(), websocket.MessageText, []byte(`{"error": "invalid token"}`))
+			c.CloseNow()
+			return
+		}
+
+		ctx := context.Background()
+		rs.HandleWSConnection(ctx, claims.RoomID, claims.Username, c)
 	}
 }

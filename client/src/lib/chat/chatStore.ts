@@ -12,35 +12,42 @@ interface Participant {
     role: number;
 }
 
-// Store state
 let wsClient: ReturnType<typeof connectWebSocket> | null = null;
 export const messages = writable<Message[]>([]);
-export const participants = writable<Participant[]>([
-    { id: 1, username: "nika", role: 1 }, // Dummy data for testing
-    { id: 2, username: "lado", role: 2 },
-]);
+export const participants = writable<Participant[]>([]);
 
-// Initialize store and connect WebSocket
-export function initializeChatStore() {
+export function initializeChatStore(initialParticipants: Participant[]) {
+    participants.set(initialParticipants);
+
     if (!wsClient) {
         wsClient = connectWebSocket();
-        wsClient.onMessage((data) => {
-            // PieSocket echoes raw text, so we'll fake a message format for testing
-            messages.update((msgs) => [...msgs, { username: "test-user", content: data }]);
+        wsClient.onMessage((message) => {
+            if (message.type === "msg") {
+                const msgData = message.data as Message;
+                messages.update((msgs) => [...msgs, msgData]);
+            } else if (message.type === "join") {
+                const userData = message.data as Participant;
+
+                participants.update((users) => {
+                    const alreadyExists = users.some((user) => user.id === userData.id);
+                    return alreadyExists ? users : [...users, userData];
+                });
+            } else if (message.type === "leave") {
+                const userData = message.data as { id: number };
+                participants.update((users) => users.filter(user => user.id !== userData.id));
+            }
         });
     }
 }
 
-// Send a chat message
 export function sendMessage(content: string) {
     if (wsClient) {
-        wsClient.send(content); // PieSocket echoes raw strings
+        wsClient.send(content);
     } else {
         console.warn("WebSocket not initialized, cannot send message");
     }
 }
 
-// Cleanup (optional)
 export function disconnectChatStore() {
     if (wsClient) {
         wsClient.close();

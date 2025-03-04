@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type { User } from "$lib/api/rooms";
+    import type { Participant } from "$lib/api/rooms";
     import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
 
     interface Props {
         currentUserRole: number;
-        participants: User[];
+        participants: Participant[];
         maxParticipants: number;
     }
 
