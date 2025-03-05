@@ -16,11 +16,11 @@ let wsClient: ReturnType<typeof connectWebSocket> | null = null;
 export const messages = writable<Message[]>([]);
 export const participants = writable<Participant[]>([]);
 
-export function initializeChatStore(initialParticipants: Participant[]) {
+export function initializeChatStore(initialParticipants: Participant[], token: string) {
     participants.set(initialParticipants);
 
     if (!wsClient) {
-        wsClient = connectWebSocket();
+        wsClient = connectWebSocket(token);
         wsClient.onMessage((message) => {
             if (message.type === "msg") {
                 const msgData = message.data as Message;

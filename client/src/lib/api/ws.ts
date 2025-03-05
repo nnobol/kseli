@@ -1,5 +1,3 @@
-import { getTokenFromLocalStorage } from "./utils";
-
 export interface WebSocketClient {
     send: (data: string) => void;
     onMessage: (callback: (data: WebSocketMessage) => void) => void;
@@ -11,8 +9,7 @@ export interface WebSocketMessage {
     data: Record<string, any>;
 }
 
-export function connectWebSocket(): WebSocketClient {
-    const token = getTokenFromLocalStorage()
+export function connectWebSocket(token: string): WebSocketClient {
     const url = `/ws/room?token=${token}`;
     const ws = new WebSocket(url);
 

@@ -1,16 +1,26 @@
-export function setTokenInLocalStorage(token: string, hours: number) {
+export function setItemInLocalStorage(key: string, item: string, hours: number) {
     const expiryTime = new Date().getTime() + hours * 60 * 60 * 1000;
-    localStorage.setItem("roomToken", JSON.stringify({ value: token, expiry: expiryTime }));
+    localStorage.setItem(key, JSON.stringify({ value: item, expiry: expiryTime }));
 }
 
-export function getTokenFromLocalStorage(): string | null {
-    const item = localStorage.getItem("roomToken");
+export function getItemFromLocalStorage(key: string): string | null {
+    const item = localStorage.getItem(key);
     if (!item) return null;
 
-    const { value, expiry } = JSON.parse(item);
-    if (new Date().getTime() > expiry) {
-        localStorage.removeItem("roomToken");
+    let parsed;
+    try {
+        parsed = JSON.parse(item);
+    } catch (e) {
+        localStorage.removeItem(key);
         return null;
     }
+
+    const { value, expiry } = parsed;
+
+    if (!value || !expiry || new Date().getTime() > expiry) {
+        localStorage.removeItem(key);
+        return null;
+    }
+
     return value;
 }

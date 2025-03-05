@@ -6,7 +6,7 @@
     import RadioFieldMaxParticipants from "./fields/RadioFieldMaxParticipants.svelte";
     import ErrorAlert from "./error-alert/ErrorAlert.svelte";
     import { createRoom } from "$lib/api/rooms";
-    import { setTokenInLocalStorage } from "$lib/api/utils";
+    import { tokenStore } from "$lib/stores/tokenStore";
     import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
 
     interface Props {
@@ -79,7 +79,7 @@
 
         try {
             const response = await createRoom(payload);
-            setTokenInLocalStorage(response.token, 1);
+            tokenStore.set(response.token);
             goto(`/room/${response.roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;

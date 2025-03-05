@@ -1,5 +1,3 @@
-import { getTokenFromLocalStorage } from "./utils";
-
 export interface RoomErrorResponse {
     statusCode?: number;
     errorMessage?: string;
@@ -106,16 +104,15 @@ export interface GetRoomOkResponse {
     secretKey?: string;
 }
 
-export async function getRoom(roomId: string): Promise<GetRoomOkResponse> {
+export async function getRoom(roomId: string, token: string): Promise<GetRoomOkResponse> {
     try {
-        const token = getTokenFromLocalStorage();
         const origin = window.location.origin;
 
         const response = await fetch(`/api/rooms/${roomId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': token!,
+                'Authorization': token,
                 'X-Origin': origin
             }
         });
@@ -195,8 +192,17 @@ function getFromLocalStorage(key: string): string | null {
     const item = localStorage.getItem(key);
     if (!item) return null;
 
-    const { value, expiry } = JSON.parse(item);
-    if (new Date().getTime() > expiry) {
+    let parsed;
+    try {
+        parsed = JSON.parse(item);
+    } catch (e) {
+        localStorage.removeItem(key);
+        return null;
+    }
+
+    const { value, expiry } = parsed;
+
+    if (!value || !expiry || new Date().getTime() > expiry) {
         localStorage.removeItem(key);
         return null;
     }

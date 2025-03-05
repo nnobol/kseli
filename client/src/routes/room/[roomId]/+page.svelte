@@ -4,12 +4,19 @@
     import {
         initializeChatStore,
         disconnectChatStore,
-    } from "$lib/chat/chatStore";
+    } from "$lib/stores/chatStore";
+    import { setItemInLocalStorage } from "$lib/api/utils.js";
 
     let { data } = $props();
+    let channel: BroadcastChannel;
 
     onMount(() => {
-        initializeChatStore(data.participants);
+        initializeChatStore(data.roomDetails.participants, data.token);
+        setItemInLocalStorage("roomToken", data.token, 1);
+        setItemInLocalStorage("roomId", data.roomId, 1);
+
+        channel = new BroadcastChannel("active-room");
+        channel.postMessage({ roomId: data.roomId });
     });
 
     onDestroy(() => {
@@ -17,4 +24,4 @@
     });
 </script>
 
-<ChatRoom {data} />
+<ChatRoom data={data.roomDetails} />

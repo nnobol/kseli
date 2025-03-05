@@ -5,7 +5,7 @@
     import FloatingInputField from "./fields/FloatingInputField.svelte";
     import ErrorAlert from "./error-alert/ErrorAlert.svelte";
     import { joinRoom } from "$lib/api/rooms";
-    import { setTokenInLocalStorage } from "$lib/api/utils";
+    import { tokenStore } from "$lib/stores/tokenStore";
     import type { JoinRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
 
     interface Props {
@@ -95,7 +95,7 @@
 
         try {
             const response = await joinRoom(roomId, payload);
-            setTokenInLocalStorage(response.token, 1);
+            tokenStore.set(response.token);
             goto(`/room/${roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;

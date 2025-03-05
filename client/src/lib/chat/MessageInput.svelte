@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { sendMessage } from "$lib/chat/chatStore";
+    import { sendMessage } from "$lib/stores/chatStore";
 
     let message = $state("");
 

@@ -2,7 +2,7 @@
     import type { GetRoomOkResponse } from "$lib/api/rooms";
     import ChatContainer from "$lib/chat/ChatContainer.svelte";
     import RoomSidebar from "$lib/chat/RoomSidebar.svelte";
-    import { messages, participants } from "$lib/chat/chatStore";
+    import { messages, participants } from "$lib/stores/chatStore";
 
     interface Props {
         data: GetRoomOkResponse;
