@@ -6,19 +6,22 @@
     interface Props {
         errorMessage: string;
         clearErrorMessage: () => void;
+        closable?: boolean;
     }
 
-    let { errorMessage, clearErrorMessage }: Props = $props();
+    let { errorMessage, clearErrorMessage, closable = true }: Props = $props();
 </script>
 
 {#snippet errorAlert()}
     <section>
         <p>{errorMessage}</p>
 
-        <CloseButton
-            onClick={clearErrorMessage}
-            buttonType={CloseButtonTypes.Error}
-        />
+        {#if closable}
+            <CloseButton
+                onClick={clearErrorMessage}
+                buttonType={CloseButtonTypes.Error}
+            />
+        {/if}
     </section>
 {/snippet}
 
