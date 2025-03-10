@@ -3,10 +3,8 @@ package models
 import "github.com/coder/websocket"
 
 type sessionIDContextKey string
-type fingerprintContextKey string
 
 const UserSessionIDKey sessionIDContextKey = "sessionId"
-const UserFingerprintKey fingerprintContextKey = "fingerprint"
 
 type Role uint8
 
@@ -17,7 +15,6 @@ const (
 
 type User struct {
 	SessionId    string          `json:"-"`
-	Fingerprint  string          `json:"-"`
 	ID           uint8           `json:"id"`
 	Username     string          `json:"username,omitempty"`
 	Role         Role            `json:"role,omitempty"`

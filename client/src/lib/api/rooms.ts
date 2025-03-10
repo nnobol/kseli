@@ -1,3 +1,5 @@
+import { getItemFromLocalStorage, setItemInLocalStorage } from "./utils";
+
 export interface RoomErrorResponse {
     statusCode?: number;
     errorMessage?: string;
@@ -16,16 +18,14 @@ export interface CreateRoomOkResponse {
 
 export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoomOkResponse> {
     try {
-        const sessionId = getSessionId();
-        const fingerprint = getFingerprint();
+        const sessionId = getUserSessionId();
 
         const response = await fetch('/api/rooms', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Api-Key': import.meta.env.VITE_API_KEY,
-                'X-Session-Id': sessionId,
-                'X-Fingerprint': fingerprint
+                'X-User-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
         });
@@ -59,16 +59,14 @@ export interface JoinRoomOkResponse {
 
 export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promise<JoinRoomOkResponse> {
     try {
-        const sessionId = getSessionId();
-        const fingerprint = getFingerprint();
+        const sessionId = getUserSessionId();
 
         const response = await fetch(`/api/rooms/${roomId}/join`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Api-Key': import.meta.env.VITE_API_KEY,
-                'X-Session-Id': sessionId,
-                'X-Fingerprint': fingerprint
+                'X-User-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
         });
@@ -139,21 +137,23 @@ export async function getRoom(roomId: string, token: string): Promise<GetRoomOkR
     }
 }
 
-function generateSessionId() {
-    return crypto.randomUUID()
+function getUserSessionId() {
+    const storedSessionId = getItemFromLocalStorage("userSessionId");
+    if (storedSessionId) return storedSessionId;
+
+    const sessionId = generateUserSessionId();
+    setItemInLocalStorage("userSessionId", sessionId, 720);
+    return sessionId;
 }
 
-function generateFingerprint() {
+function generateUserSessionId() {
     const components = [
         navigator.userAgent,
-        navigator.hardwareConcurrency,
-        navigator.maxTouchPoints,
-        screen.width,
-        screen.height,
-        new Date().getTimezoneOffset()
+        crypto.randomUUID(),
+        new Date().getTime()
     ];
 
-    return hashFNV32(components.join("."));
+    return hashFNV32(components.join("."))
 }
 
 function hashFNV32(input: string) {
@@ -163,48 +163,4 @@ function hashFNV32(input: string) {
         hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
     }
     return (hash >>> 0).toString(16);
-}
-
-function getFingerprint() {
-    const storedFingerprint = getFromLocalStorage("fingerprint");
-    if (storedFingerprint) return storedFingerprint;
-
-    const fingerprint = generateFingerprint();
-    setInLocalStorage("fingerprint", fingerprint, 30);
-    return fingerprint;
-}
-
-function getSessionId() {
-    const storedSessionId = getFromLocalStorage("sessionId");
-    if (storedSessionId) return storedSessionId;
-
-    const sessionId = generateSessionId();
-    setInLocalStorage("sessionId", sessionId, 30);
-    return sessionId;
-}
-
-function setInLocalStorage(key: string, value: string, days: number) {
-    const expiryTime = new Date().getTime() + days * 24 * 60 * 60 * 1000;
-    localStorage.setItem(key, JSON.stringify({ value, expiry: expiryTime }));
-}
-
-function getFromLocalStorage(key: string): string | null {
-    const item = localStorage.getItem(key);
-    if (!item) return null;
-
-    let parsed;
-    try {
-        parsed = JSON.parse(item);
-    } catch (e) {
-        localStorage.removeItem(key);
-        return null;
-    }
-
-    const { value, expiry } = parsed;
-
-    if (!value || !expiry || new Date().getTime() > expiry) {
-        localStorage.removeItem(key);
-        return null;
-    }
-    return value;
 }

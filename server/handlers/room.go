@@ -29,13 +29,7 @@ func CreateRoomHandler(rs *services.RoomService) http.HandlerFunc {
 			return
 		}
 
-		fingerprint, ok := r.Context().Value(models.UserFingerprintKey).(string)
-		if !ok {
-			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Fingerprint missing.")
-			return
-		}
-
-		resp, errResp := rs.CreateRoom(req.Username, sessionID, fingerprint, req.MaxParticipants)
+		resp, errResp := rs.CreateRoom(req.Username, sessionID, req.MaxParticipants)
 
 		if errResp != nil {
 			utils.WriteErrorResponse(w, errResp)
@@ -63,13 +57,7 @@ func JoinRoomHandler(rs *services.RoomService) http.HandlerFunc {
 			return
 		}
 
-		fingerprint, ok := r.Context().Value(models.UserFingerprintKey).(string)
-		if !ok {
-			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Fingerprint missing.")
-			return
-		}
-
-		resp, errResp := rs.JoinRoom(roomID, req.Username, req.RoomSecretKey, sessionID, fingerprint)
+		resp, errResp := rs.JoinRoom(roomID, req.Username, req.RoomSecretKey, sessionID)
 
 		if errResp != nil {
 			utils.WriteErrorResponse(w, errResp)

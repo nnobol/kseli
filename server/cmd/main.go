@@ -27,8 +27,7 @@ func main() {
 	// POST request to create a chat room
 	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
 		handlers.CreateRoomHandler(rs),
-		middleware.ValidateFingerprint(),
-		middleware.ValidateSessionID(),
+		middleware.ValidateUserSessionID(),
 		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))
@@ -36,8 +35,7 @@ func main() {
 	// POST request for a user to join a chat room
 	mux.Handle("POST /api/rooms/{roomID}/join", middleware.WithMiddleware(
 		handlers.JoinRoomHandler(rs),
-		middleware.ValidateFingerprint(),
-		middleware.ValidateSessionID(),
+		middleware.ValidateUserSessionID(),
 		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))

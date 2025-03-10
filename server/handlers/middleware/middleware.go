@@ -69,32 +69,16 @@ func ValidateAPIKey() func(http.Handler) http.Handler {
 	}
 }
 
-func ValidateSessionID() func(http.Handler) http.Handler {
+func ValidateUserSessionID() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			sessionID := r.Header.Get("X-Session-Id")
+			sessionID := r.Header.Get("X-User-Session-Id")
 			if sessionID == "" {
 				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid or missing Session Id.")
 				return
 			}
 
 			ctx := context.WithValue(r.Context(), models.UserSessionIDKey, sessionID)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-}
-
-func ValidateFingerprint() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fingerprint := r.Header.Get("X-Fingerprint")
-			if fingerprint == "" {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid or missing Fingerprint.")
-				return
-			}
-
-			ctx := context.WithValue(r.Context(), models.UserFingerprintKey, fingerprint)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

@@ -2,10 +2,22 @@
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
     import Footer from "$lib/common/Footer.svelte";
+    import { onMount } from "svelte";
+    import { getItemFromSessionStorage } from "$lib/api/utils";
+
+    let isSameSession = false;
+
+    onMount(() => {
+        isSameSession = !!getItemFromSessionStorage("activeRoomId");
+        sessionStorage.clear();
+    });
 </script>
 
 <main>
-    {#if page.status === 404}
+    {#if isSameSession}
+        <h1>Error 500</h1>
+        <p>You tried navigating to a different page which closed the room.</p>
+    {:else if page.status === 404}
         <h1>404 - Page Not Found</h1>
         <p>Route '{page.url.pathname}' doesn’t exist.</p>
     {:else}

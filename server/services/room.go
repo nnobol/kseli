@@ -24,7 +24,7 @@ func NewRoomService(s *storage.MainStorage) *RoomService {
 	}
 }
 
-func (rs *RoomService) CreateRoom(username, sessionID, fingerprint string, maxParticipants uint8) (*api.CreateRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) CreateRoom(username, sessionID string, maxParticipants uint8) (*api.CreateRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 2)
 
 	validateUsername(username, fieldErrors)
@@ -38,11 +38,10 @@ func (rs *RoomService) CreateRoom(username, sessionID, fingerprint string, maxPa
 	}
 
 	adminUser := &models.User{
-		SessionId:   sessionID,
-		Fingerprint: fingerprint,
-		ID:          1,
-		Username:    username,
-		Role:        models.Admin,
+		SessionId: sessionID,
+		ID:        1,
+		Username:  username,
+		Role:      models.Admin,
 	}
 
 	roomID := rs.s.CreateRoom(adminUser, maxParticipants)
@@ -70,7 +69,7 @@ func (rs *RoomService) CreateRoom(username, sessionID, fingerprint string, maxPa
 	}, nil
 }
 
-func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID, fingerprint string) (*api.JoinRoomResponse, *api.ErrorResponse) {
+func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID string) (*api.JoinRoomResponse, *api.ErrorResponse) {
 	fieldErrors := make(map[string]string, 3)
 
 	validateRoomId(roomID, fieldErrors)
@@ -103,6 +102,15 @@ func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID, fingerpr
 		}
 	}
 
+	if _, sessionAlreadyInRoom := room.Participants[sessionID]; sessionAlreadyInRoom {
+		room.Mu.RUnlock()
+		fieldErrors["roomId"] = "You can not join a room you are already in."
+		return nil, &api.ErrorResponse{
+			StatusCode:  http.StatusBadRequest,
+			FieldErrors: fieldErrors,
+		}
+	}
+
 	// no need to lock for MaxParticipants, is an immutable field, won't be concurrently modified
 	// need to think of how to optimize
 	if uint8(len(room.Participants)) == room.MaxParticipants {
@@ -114,7 +122,7 @@ func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID, fingerpr
 		}
 	}
 
-	if _, usernameTaken := room.Participants[username]; usernameTaken {
+	if room.IsUsernameTaken(username) {
 		room.Mu.RUnlock()
 		fieldErrors["username"] = "This username is taken."
 		return nil, &api.ErrorResponse{
@@ -129,11 +137,10 @@ func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID, fingerpr
 	room.NextUserId++
 
 	user := &models.User{
-		SessionId:   sessionID,
-		Fingerprint: fingerprint,
-		ID:          userId,
-		Username:    username,
-		Role:        models.Member,
+		SessionId: sessionID,
+		ID:        userId,
+		Username:  username,
+		Role:      models.Member,
 	}
 
 	room.Join(user)

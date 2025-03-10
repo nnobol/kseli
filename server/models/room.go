@@ -29,7 +29,7 @@ type ChatMessage struct {
 
 // make sure caller locks room for writing
 func (r *Room) Join(user *User) {
-	r.Participants[user.Username] = user
+	r.Participants[user.SessionId] = user
 }
 
 // make sure caller locks room for reading
@@ -44,20 +44,30 @@ func (r *Room) GetParticipantsAsSlice() []User {
 }
 
 // make sure caller locks room for reading
-func (r *Room) GetUsernameByID(userID uint8) string {
-
-	for username, user := range r.Participants {
-		if userID == user.ID {
-			return username
+func (r *Room) GetUserByUsername(username string) (*User, bool) {
+	for _, user := range r.Participants {
+		if username == user.Username {
+			return user, true
 		}
 	}
 
-	return ""
+	return nil, false
+}
+
+// make sure caller locks room for reading
+func (r *Room) IsUsernameTaken(username string) bool {
+	for _, user := range r.Participants {
+		if username == user.Username {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *Room) AddWSConnection(ctx context.Context, username string, conn *websocket.Conn) {
 	r.Mu.Lock()
-	user, exists := r.Participants[username]
+	user, exists := r.GetUserByUsername(username)
 	if !exists {
 		r.Mu.Unlock()
 		return
@@ -151,7 +161,7 @@ func (r *Room) removeWSConnection(username string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
-	user, exists := r.Participants[username]
+	user, exists := r.GetUserByUsername(username)
 	if !exists {
 		return
 	}
