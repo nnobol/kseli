@@ -1,7 +1,7 @@
 package services
 
 import (
-	"context"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -11,7 +11,8 @@ import (
 	"kseli-server/models/api"
 	"kseli-server/storage"
 
-	"github.com/coder/websocket"
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
 type RoomService struct {
@@ -169,6 +170,48 @@ func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID string) (
 	}, nil
 }
 
+func (rs *RoomService) KickUser(roomID string, targetUserID uint8, userClaims *models.Claims) *api.ErrorResponse {
+	room, exists := rs.s.GetRoom(roomID)
+	if !exists {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusNotFound,
+			ErrorMessage: "Chat Room not found.",
+		}
+	}
+
+	// edge case: room might get deleted by some go routine and panic on room.RoomID
+	if userClaims.RoomID != room.RoomID {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You do not have access to this room.",
+		}
+	}
+
+	if userClaims.Role != models.Admin {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You are not an admin and can't kick anyone from this room.",
+		}
+	}
+
+	if targetUserID == 0 {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "Target User ID not sent in the request.",
+		}
+	}
+
+	err := room.Kick(targetUserID)
+	if err != nil {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	return nil
+}
+
 func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.GetRoomResponse, *api.ErrorResponse) {
 	room, exists := rs.s.GetRoom(roomID)
 	if !exists {
@@ -205,16 +248,17 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 	}, nil
 }
 
-func (rs *RoomService) HandleWSConnection(ctx context.Context, roomID, username string, conn *websocket.Conn) {
+func (rs *RoomService) HandleRoomWSConnection(conn net.Conn, roomID, username string) {
+	// Room should most definitely exist at this point, look into if this is needed
 	room, exists := rs.s.GetRoom(roomID)
 	if !exists {
-		conn.Write(ctx, websocket.MessageText, []byte(`{"error": "internal error - room not found"}`))
-		conn.CloseNow()
+		wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "room-not-exists"))
+		conn.Close()
 		return
 	}
 
 	// edge case: room might get deleted by some go routine before AddWSConnection locks
-	room.AddWSConnection(ctx, username, conn)
+	room.AddWSConnection(conn, username)
 }
 
 func validateRoomId(roomID string, fieldErrors map[string]string) {

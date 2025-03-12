@@ -1,11 +1,14 @@
 package models
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"sync"
+	"time"
 
-	"github.com/coder/websocket"
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
 type Room struct {
@@ -27,9 +30,56 @@ type ChatMessage struct {
 	Content  string `json:"content"`
 }
 
+type CloseMessage struct {
+	Reason string `json:"reason"`
+}
+
+type LeaveMessage struct {
+	ID uint8 `json:"id"`
+}
+
 // make sure caller locks room for writing
 func (r *Room) Join(user *User) {
 	r.Participants[user.SessionId] = user
+}
+
+func (r *Room) Kick(targetUserID uint8) error {
+	r.Mu.Lock()
+
+	targetUser, exists := r.GetUserByID(targetUserID)
+	if !exists {
+		return fmt.Errorf("User with ID '%d' not found in room", targetUserID)
+	}
+
+	if targetUser.WSConnection != nil {
+
+		wsutil.WriteServerMessage(targetUser.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "kick"))
+
+		targetUser.WSConnection.Close()
+		targetUser.WSConnection = nil
+	}
+
+	if targetUser.MessageQueue != nil {
+		close(targetUser.MessageQueue)
+		targetUser.MessageQueue = nil
+	}
+
+	delete(r.Participants, targetUser.SessionId)
+
+	r.Mu.Unlock()
+
+	go func() {
+		leaveMsg, _ := json.Marshal(WSMessage{
+			MsgType: "leave",
+			Data: LeaveMessage{
+				ID: targetUser.ID,
+			},
+		})
+
+		r.broadcastMessage(leaveMsg)
+	}()
+
+	return nil
 }
 
 // make sure caller locks room for reading
@@ -55,6 +105,17 @@ func (r *Room) GetUserByUsername(username string) (*User, bool) {
 }
 
 // make sure caller locks room for reading
+func (r *Room) GetUserByID(userID uint8) (*User, bool) {
+	for _, user := range r.Participants {
+		if userID == user.ID {
+			return user, true
+		}
+	}
+
+	return nil, false
+}
+
+// make sure caller locks room for reading
 func (r *Room) IsUsernameTaken(username string) bool {
 	for _, user := range r.Participants {
 		if username == user.Username {
@@ -65,18 +126,21 @@ func (r *Room) IsUsernameTaken(username string) bool {
 	return false
 }
 
-func (r *Room) AddWSConnection(ctx context.Context, username string, conn *websocket.Conn) {
+func (r *Room) AddWSConnection(conn net.Conn, username string) {
 	r.Mu.Lock()
+	// User should most definitely exist at this point, look into if this is needed.
 	user, exists := r.GetUserByUsername(username)
 	if !exists {
 		r.Mu.Unlock()
+		wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "user-not-exists"))
+		conn.Close()
 		return
 	}
 
+	// Both of these properties should be nil, look into this as well
 	if user.WSConnection != nil {
-		user.WSConnection.CloseNow()
+		user.WSConnection.Close()
 	}
-
 	if user.MessageQueue != nil {
 		close(user.MessageQueue)
 	}
@@ -97,37 +161,60 @@ func (r *Room) AddWSConnection(ctx context.Context, username string, conn *webso
 
 	r.broadcastMessage(wsMessage)
 
-	go r.handleRead(username, ctx, conn)
-	go r.handleWrite(username, ctx, conn, user.MessageQueue)
+	pongChan := make(chan struct{}, 1)
+	go r.handleRead(conn, username, pongChan)
+	go r.handleWrite(conn, username, user.MessageQueue, pongChan)
 }
 
-func (r *Room) handleRead(username string, ctx context.Context, conn *websocket.Conn) {
+func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct{}) {
 	defer r.removeWSConnection(username)
 
 	for {
-		msgType, msg, err := conn.Read(ctx)
+		msg, op, err := wsutil.ReadClientData(conn)
 		if err != nil {
 			break
 		}
 
-		if msgType != websocket.MessageText {
-			continue
+		switch op {
+		case ws.OpText:
+			wsMessage, _ := json.Marshal(WSMessage{
+				MsgType: "msg",
+				Data: ChatMessage{
+					Username: username,
+					Content:  string(msg),
+				},
+			})
+
+			r.broadcastMessage(wsMessage)
+
+		case ws.OpBinary:
+			select {
+			case pongChan <- struct{}{}:
+			default:
+			}
+
+		case ws.OpClose:
+			// treat this as leave button, close conn, let others know of leave
+			// think about how to handle client closes due to refresh
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "goodbye"))
+			return
+
+		default:
 		}
-
-		wsMessage, _ := json.Marshal(WSMessage{
-			MsgType: "msg",
-			Data: ChatMessage{
-				Username: username,
-				Content:  string(msg),
-			},
-		})
-
-		r.broadcastMessage(wsMessage)
 	}
 }
 
-func (r *Room) handleWrite(username string, ctx context.Context, conn *websocket.Conn, queue <-chan []byte) {
+func (r *Room) handleWrite(conn net.Conn, username string, queue <-chan []byte, pongChan <-chan struct{}) {
 	defer r.removeWSConnection(username)
+
+	pingInterval := 20 * time.Second
+	timeoutDuration := 30 * time.Second
+
+	pingTicker := time.NewTicker(pingInterval)
+	defer pingTicker.Stop()
+
+	lastPong := time.Now()
+	hasSentFirstPing := false
 
 	for {
 		select {
@@ -136,11 +223,22 @@ func (r *Room) handleWrite(username string, ctx context.Context, conn *websocket
 				return
 			}
 
-			if err := conn.Write(ctx, websocket.MessageText, msg); err != nil {
+			if err := wsutil.WriteServerMessage(conn, ws.OpText, msg); err != nil {
 				return
 			}
-		case <-ctx.Done():
-			return
+
+		case <-pongChan:
+			lastPong = time.Now()
+
+		case <-pingTicker.C:
+			if hasSentFirstPing && time.Since(lastPong) > timeoutDuration {
+				return
+			}
+
+			if err := wsutil.WriteServerMessage(conn, ws.OpBinary, []byte{0}); err != nil {
+				return
+			}
+			hasSentFirstPing = true
 		}
 	}
 }
@@ -167,7 +265,7 @@ func (r *Room) removeWSConnection(username string) {
 	}
 
 	if user.WSConnection != nil {
-		user.WSConnection.CloseNow()
+		user.WSConnection.Close()
 		user.WSConnection = nil
 	}
 

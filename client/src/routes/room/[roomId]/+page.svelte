@@ -2,26 +2,23 @@
     import { onMount } from "svelte";
     import { beforeNavigate } from "$app/navigation";
     import ChatRoom from "$lib/chat/ChatRoom.svelte";
-    import {
-        initializeChatStore,
-        disconnectChatStore,
-    } from "$lib/stores/chatStore";
+    import { initChatSession, endChatSession } from "$lib/stores/chatStore";
 
     let { data } = $props();
 
     onMount(() => {
-        initializeChatStore(data.roomDetails.participants, data.token);
+        initChatSession(data.roomDetails.participants, data.token);
     });
 
     beforeNavigate(({ type }) => {
         if (type === "popstate") {
-            disconnectChatStore();
+            endChatSession();
             sessionStorage.clear();
         }
     });
 
     function handleBeforeUnload() {
-        disconnectChatStore();
+        endChatSession();
     }
 </script>
 

@@ -1,57 +1,87 @@
-export interface WebSocketClient {
-    send: (data: string) => void;
-    onMessage: (callback: (data: WebSocketMessage) => void) => void;
-    close: () => void;
-}
-
 export interface WebSocketMessage {
     type: string;
     data: Record<string, any>;
 }
 
-export function connectWebSocket(token: string): WebSocketClient {
-    const url = `/ws/room?token=${token}`;
-    const ws = new WebSocket(url);
+type WsMessageCallback = (data: WebSocketMessage) => void;
+type WsEventCallback = () => void;
+type WsErrorCallback = (error: Event) => void;
+type WsCloseCallback = (event: CloseEvent) => void;
 
-    let messageCallback: ((data: WebSocketMessage) => void) | null = null;
+export class ChatWebSocketClient {
+    private ws: WebSocket;
+    private messageListeners: WsMessageCallback[] = [];
+    private openListeners: WsEventCallback[] = [];
+    private errorListeners: WsErrorCallback[] = [];
+    private closeListeners: WsCloseCallback[] = [];
 
-    ws.onopen = () => {
-        console.log("Connected to WebSocket, readyState:", ws.readyState);
-    };
+    constructor(token: string) {
+        const url = `/ws/room?token=${token}`;
+        this.ws = new WebSocket(url);
+        this.ws.binaryType = "arraybuffer";
 
-    ws.onerror = (error) => {
-        console.error("WebSocket error:", error, "readyState:", ws.readyState);
-    };
+        this.ws.onopen = this.handleOpen.bind(this);
+        this.ws.onmessage = this.handleMessage.bind(this);
+        this.ws.onerror = this.handleError.bind(this);
+        this.ws.onclose = this.handleClose.bind(this);
+    }
 
-    ws.onclose = (event) => {
-        console.log("WebSocket close event details:", {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean,
-            type: event.type,
-            timeStamp: event.timeStamp
-        });
-    };
+    private handleOpen() {
+        this.openListeners.forEach((callback) => callback());
+    }
 
-    return {
-        send: (data: string) => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(data);
-            } else {
-                console.warn("WebSocket not open, cannot send:", data);
+    private sendPong() {
+        const pong = new Uint8Array([1]);
+        this.ws.send(pong);
+    }
+
+    private handleMessage(event: MessageEvent) {
+        if (typeof event.data === "string") {
+            try {
+                const parsedData: WebSocketMessage = JSON.parse(event.data);
+                this.messageListeners.forEach((callback) => callback(parsedData));
+            } catch (error) {
+                console.error("Error parsing WebSocket message:", error);
             }
-        },
-        onMessage: (callback: (data: WebSocketMessage) => void) => {
-            messageCallback = callback;
-            ws.onmessage = (event) => {
-                try {
-                    const parsedData: WebSocketMessage = JSON.parse(event.data);
-                    if (messageCallback) messageCallback(parsedData);
-                } catch (error) {
-                    console.error("Error parsing WebSocket message:", error);
-                }
-            };
-        },
-        close: () => ws.close(),
-    };
+        } else {
+            // means we received ping
+            this.sendPong();
+        }
+    }
+
+    private handleError(event: Event) {
+        this.errorListeners.forEach((callback) => callback(event));
+    }
+
+    private handleClose(event: CloseEvent) {
+        this.closeListeners.forEach((callback) => callback(event));
+    }
+
+    public send(data: string): void {
+        if (this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(data);
+        } else {
+            console.warn("WebSocket not open, cannot send:", data);
+        }
+    }
+
+    public close(): void {
+        this.ws.close();
+    }
+
+    public onMessage(callback: WsMessageCallback): void {
+        this.messageListeners.push(callback);
+    }
+
+    public onOpen(callback: WsEventCallback): void {
+        this.openListeners.push(callback);
+    }
+
+    public onError(callback: WsErrorCallback): void {
+        this.errorListeners.push(callback);
+    }
+
+    public onClose(callback: WsCloseCallback): void {
+        this.closeListeners.push(callback);
+    }
 }

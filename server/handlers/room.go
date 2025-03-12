@@ -1,17 +1,18 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
-
-	"github.com/coder/websocket"
+	"time"
 
 	"kseli-server/auth"
 	"kseli-server/handlers/utils"
 	"kseli-server/models"
 	"kseli-server/models/api"
 	"kseli-server/services"
+
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
 func CreateRoomHandler(rs *services.RoomService) http.HandlerFunc {
@@ -19,7 +20,7 @@ func CreateRoomHandler(rs *services.RoomService) http.HandlerFunc {
 		var req api.CreateRoomRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body")
+			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body.")
 			return
 		}
 
@@ -47,7 +48,7 @@ func JoinRoomHandler(rs *services.RoomService) http.HandlerFunc {
 		roomID := r.PathValue("roomID")
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body")
+			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body.")
 			return
 		}
 
@@ -68,6 +69,34 @@ func JoinRoomHandler(rs *services.RoomService) http.HandlerFunc {
 	}
 }
 
+func KickUserHandler(rs *services.RoomService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req api.KickUserRequest
+
+		roomID := r.PathValue("roomID")
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body.")
+			return
+		}
+
+		userClaims, ok := r.Context().Value(models.UserClaimsKey).(*models.Claims)
+		if !ok || userClaims == nil {
+			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Unauthorized.")
+			return
+		}
+
+		errResp := rs.KickUser(roomID, req.TargetUserID, userClaims)
+
+		if errResp != nil {
+			utils.WriteErrorResponse(w, errResp)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -75,7 +104,7 @@ func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 
 		userClaims, ok := r.Context().Value(models.UserClaimsKey).(*models.Claims)
 		if !ok || userClaims == nil {
-			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Unauthorized")
+			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Unauthorized.")
 			return
 		}
 
@@ -92,27 +121,27 @@ func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 
 func RoomWebSocketHandler(rs *services.RoomService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := websocket.Accept(w, r, nil)
+		conn, _, _, err := ws.HTTPUpgrader{
+			Timeout: 2 * time.Second,
+		}.Upgrade(r, w)
 		if err != nil {
 			return
 		}
 
 		token := r.URL.Query().Get("token")
-
 		if token == "" {
-			c.Write(r.Context(), websocket.MessageText, []byte(`{"error": "missing token"}`))
-			c.CloseNow()
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token"))
+			conn.Close()
 			return
 		}
 
 		claims, err := auth.ValidateToken(token)
 		if err != nil {
-			c.Write(r.Context(), websocket.MessageText, []byte(`{"error": "invalid token"}`))
-			c.CloseNow()
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token"))
+			conn.Close()
 			return
 		}
 
-		ctx := context.Background()
-		rs.HandleWSConnection(ctx, claims.RoomID, claims.Username, c)
+		rs.HandleRoomWSConnection(conn, claims.RoomID, claims.Username)
 	}
 }

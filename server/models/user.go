@@ -1,6 +1,6 @@
 package models
 
-import "github.com/coder/websocket"
+import "net"
 
 type sessionIDContextKey string
 
@@ -14,10 +14,10 @@ const (
 )
 
 type User struct {
-	SessionId    string          `json:"-"`
-	ID           uint8           `json:"id"`
-	Username     string          `json:"username,omitempty"`
-	Role         Role            `json:"role,omitempty"`
-	WSConnection *websocket.Conn `json:"-"`
-	MessageQueue chan []byte     `json:"-"`
+	SessionId    string      `json:"-"`
+	ID           uint8       `json:"id"`
+	Username     string      `json:"username,omitempty"`
+	Role         Role        `json:"role,omitempty"`
+	WSConnection net.Conn    `json:"-"`
+	MessageQueue chan []byte `json:"-"`
 }

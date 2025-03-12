@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import { connectWebSocket } from "$lib/api/ws";
+import { ChatWebSocketClient } from "$lib/api/ws";
 
 interface Message {
     username: string;
@@ -12,46 +12,52 @@ interface Participant {
     role: number;
 }
 
-let wsClient: ReturnType<typeof connectWebSocket> | null = null;
+let chatConnection: ChatWebSocketClient | null = null;
 export const messages = writable<Message[]>([]);
 export const participants = writable<Participant[]>([]);
 
-export function initializeChatStore(initialParticipants: Participant[], token: string) {
+export function initChatSession(initialParticipants: Participant[], token: string) {
     participants.set(initialParticipants);
 
-    if (!wsClient) {
-        wsClient = connectWebSocket(token);
-        wsClient.onMessage((message) => {
-            if (message.type === "msg") {
-                const msgData = message.data as Message;
-                messages.update((msgs) => [...msgs, msgData]);
-            } else if (message.type === "join") {
-                const userData = message.data as Participant;
-
-                participants.update((users) => {
-                    const alreadyExists = users.some((user) => user.id === userData.id);
-                    return alreadyExists ? users : [...users, userData];
-                });
-            } else if (message.type === "leave") {
-                const userData = message.data as { id: number };
-                participants.update((users) => users.filter(user => user.id !== userData.id));
+    if (!chatConnection) {
+        chatConnection = new ChatWebSocketClient(token)
+        chatConnection.onMessage((message) => {
+            switch (message.type) {
+                case "msg":
+                    const msgData = message.data as Message;
+                    messages.update((msgs) => [...msgs, msgData]);
+                    break;
+                case "join":
+                    const joinData = message.data as Participant;
+                    participants.update((users) => {
+                        const alreadyExists = users.some((user) => user.id === joinData.id);
+                        return alreadyExists ? users : [...users, joinData];
+                    });
+                    break;
+                case "leave":
+                    const leaveData = message.data as { id: number };
+                    participants.update((users) => users.filter(user => user.id !== leaveData.id));
+                    break;
             }
         });
+        chatConnection.onClose((event) => {
+            console.log(event.code, event.reason)
+        })
     }
 }
 
 export function sendMessage(content: string) {
-    if (wsClient) {
-        wsClient.send(content);
+    if (chatConnection) {
+        chatConnection.send(content);
     } else {
         console.warn("WebSocket not initialized, cannot send message");
     }
 }
 
-export function disconnectChatStore() {
-    if (wsClient) {
-        wsClient.close();
-        wsClient = null;
+export function endChatSession() {
+    if (chatConnection) {
+        chatConnection.close();
+        chatConnection = null;
         messages.set([]);
         participants.set([]);
     }

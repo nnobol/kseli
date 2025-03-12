@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"kseli-server/config"
 	"kseli-server/handlers"
@@ -40,6 +41,13 @@ func main() {
 		middleware.ValidateOrigin(),
 	))
 
+	// POST request to kick a user from a chat room
+	mux.Handle("POST /api/rooms/{roomID}/kick", middleware.WithMiddleware(
+		handlers.KickUserHandler(rs),
+		middleware.ValidateTokenFromHeader(),
+		middleware.ValidateOrigin(),
+	))
+
 	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
 		handlers.GetRoomHandler(rs),
@@ -64,9 +72,16 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 	}))
 
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+	}
+
 	log.Println("Listening on :8080...")
-	err := http.ListenAndServe(":8080", mux)
-	if err != nil {
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }

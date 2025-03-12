@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Participant } from "$lib/api/rooms";
+    import { kickUser, type Participant } from "$lib/api/rooms";
     import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
 
     interface Props {
@@ -16,6 +16,12 @@
 
     function getRoleTitle(role: number) {
         return role === 1 ? "Admin" : "User";
+    }
+
+    async function handleKick(userId: number) {
+        await kickUser({
+            userId: userId,
+        });
     }
 </script>
 
@@ -40,7 +46,7 @@
                 {#if currentUserRole === 1 && participant.role !== 1}
                     <div class="admin-buttons">
                         <TooltipWrapper content="Kick User">
-                            <button>
+                            <button onclick={() => handleKick(participant.id)}>
                                 <img src="/kick-icon.svg" alt="Kick" />
                             </button>
                         </TooltipWrapper>

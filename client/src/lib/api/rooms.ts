@@ -1,4 +1,4 @@
-import { getItemFromLocalStorage, setItemInLocalStorage } from "./utils";
+import { getItemFromLocalStorage, getItemFromSessionStorage, setItemInLocalStorage } from "./utils";
 
 export interface RoomErrorResponse {
     statusCode?: number;
@@ -78,6 +78,41 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
         }
 
         return responseBody as JoinRoomOkResponse;
+    } catch (err) {
+        if (err instanceof Error) {
+            throw {
+                errorMessage: "An unexpected server error occurred. Please try again later.",
+            } as RoomErrorResponse;
+        }
+
+        throw err as RoomErrorResponse;
+    }
+}
+
+export interface KickUserPayload {
+    userId: number;
+}
+
+export async function kickUser(payload: KickUserPayload): Promise<void> {
+    try {
+        const token = getItemFromSessionStorage("token");
+        const roomId = getItemFromSessionStorage("activeRoomId")
+
+        const response = await fetch(`/api/rooms/${roomId!}/kick`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token!
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (response.status === 204) {
+            return;
+        }
+
+        const responseBody = await response.json();
+        throw responseBody as RoomErrorResponse;
     } catch (err) {
         if (err instanceof Error) {
             throw {
