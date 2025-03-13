@@ -65,8 +65,8 @@ export class ChatWebSocketClient {
         }
     }
 
-    public close(): void {
-        this.ws.close();
+    public close(code?: number, reason?: string): void {
+        this.ws.close(code, reason);
     }
 
     public onMessage(callback: WsMessageCallback): void {

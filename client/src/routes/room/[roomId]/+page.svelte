@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { page } from "$app/state";
     import { beforeNavigate } from "$app/navigation";
     import ChatRoom from "$lib/chat/ChatRoom.svelte";
     import { initChatSession, endChatSession } from "$lib/stores/chatStore";
@@ -13,14 +14,8 @@
     beforeNavigate(({ type }) => {
         if (type === "popstate") {
             endChatSession();
-            sessionStorage.clear();
         }
     });
-
-    function handleBeforeUnload() {
-        endChatSession();
-    }
 </script>
 
-<!-- <svelte:window on:beforeunload={handleBeforeUnload} /> -->
 <ChatRoom data={data.roomDetails} />

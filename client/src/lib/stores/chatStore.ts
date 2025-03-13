@@ -56,7 +56,7 @@ export function sendMessage(content: string) {
 
 export function endChatSession() {
     if (chatConnection) {
-        chatConnection.close();
+        chatConnection.close(1000, "leave");
         chatConnection = null;
         messages.set([]);
         participants.set([]);

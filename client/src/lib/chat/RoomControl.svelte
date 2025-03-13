@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { endChatSession } from "$lib/stores/chatStore";
+
     interface Props {
         secretKey?: string;
         currentUserRole: number;
@@ -12,7 +14,7 @@
         <p>Key: {secretKey}</p>
     {/if}
     <div class="button-wrapper">
-        <button>Leave Room</button>
+        <button onclick={() => endChatSession()}>Leave Room</button>
         {#if currentUserRole == 1}
             <button>Close Room</button>
         {/if}

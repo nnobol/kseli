@@ -45,6 +45,7 @@ func (r *Room) Join(user *User) {
 
 func (r *Room) Kick(targetUserID uint8) error {
 	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	targetUser, exists := r.GetUserByID(targetUserID)
 	if !exists {
@@ -66,18 +67,7 @@ func (r *Room) Kick(targetUserID uint8) error {
 
 	delete(r.Participants, targetUser.SessionId)
 
-	r.Mu.Unlock()
-
-	go func() {
-		leaveMsg, _ := json.Marshal(WSMessage{
-			MsgType: "leave",
-			Data: LeaveMessage{
-				ID: targetUser.ID,
-			},
-		})
-
-		r.broadcastMessage(leaveMsg)
-	}()
+	go r.broadcastLeave(targetUser.ID)
 
 	return nil
 }
@@ -167,11 +157,24 @@ func (r *Room) AddWSConnection(conn net.Conn, username string) {
 }
 
 func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct{}) {
-	defer r.removeWSConnection(username)
+	var cleanup bool
+
+	defer func() {
+		if cleanup {
+			close(pongChan)
+			r.removeUserFromRoom(username)
+		}
+	}()
 
 	for {
+		// if "leave" is not received (tab close, browser close), we break and then clean up when ping fails from handleWrite
 		msg, op, err := wsutil.ReadClientData(conn)
 		if err != nil {
+			if closeErr, ok := err.(wsutil.ClosedError); ok {
+				if closeErr.Reason == "leave" {
+					cleanup = true
+				}
+			}
 			break
 		}
 
@@ -193,22 +196,23 @@ func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct
 			default:
 			}
 
-		case ws.OpClose:
-			// treat this as leave button, close conn, let others know of leave
-			// think about how to handle client closes due to refresh
-			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "goodbye"))
-			return
-
 		default:
 		}
 	}
 }
 
-func (r *Room) handleWrite(conn net.Conn, username string, queue <-chan []byte, pongChan <-chan struct{}) {
-	defer r.removeWSConnection(username)
+func (r *Room) handleWrite(conn net.Conn, username string, queue <-chan []byte, pongChan chan struct{}) {
+	var cleanup bool
 
-	pingInterval := 20 * time.Second
-	timeoutDuration := 30 * time.Second
+	defer func() {
+		if cleanup {
+			close(pongChan)
+			r.removeUserFromRoom(username)
+		}
+	}()
+
+	pingInterval := 15 * time.Second
+	timeoutDuration := 20 * time.Second
 
 	pingTicker := time.NewTicker(pingInterval)
 	defer pingTicker.Stop()
@@ -232,10 +236,12 @@ func (r *Room) handleWrite(conn net.Conn, username string, queue <-chan []byte, 
 
 		case <-pingTicker.C:
 			if hasSentFirstPing && time.Since(lastPong) > timeoutDuration {
+				cleanup = true
 				return
 			}
 
 			if err := wsutil.WriteServerMessage(conn, ws.OpBinary, []byte{0}); err != nil {
+				cleanup = true
 				return
 			}
 			hasSentFirstPing = true
@@ -255,7 +261,18 @@ func (r *Room) broadcastMessage(msg []byte) {
 	}
 }
 
-func (r *Room) removeWSConnection(username string) {
+func (r *Room) broadcastLeave(userID uint8) {
+	leaveMsg, _ := json.Marshal(WSMessage{
+		MsgType: "leave",
+		Data: LeaveMessage{
+			ID: userID,
+		},
+	})
+
+	r.broadcastMessage(leaveMsg)
+}
+
+func (r *Room) removeUserFromRoom(username string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -273,4 +290,12 @@ func (r *Room) removeWSConnection(username string) {
 		close(user.MessageQueue)
 		user.MessageQueue = nil
 	}
+
+	fmt.Printf("r.Participants: %v\n", r.Participants)
+
+	delete(r.Participants, user.SessionId)
+
+	fmt.Printf("r.Participants: %v\n", r.Participants)
+
+	go r.broadcastLeave(user.ID)
 }

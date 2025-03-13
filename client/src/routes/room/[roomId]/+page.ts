@@ -13,8 +13,6 @@ export const load: PageLoad = async ({ params }) => {
     const sessionToken = getItemFromSessionStorage("token");
     const activeRoomId = getItemFromSessionStorage("activeRoomId");
 
-    console.log(window.name)
-
     // If there is are session items and stored and param room ids match, we assume this is a refresh
     if (sessionToken && (activeRoomId === roomId)) {
         // Same tab, we count this a page reload
@@ -34,7 +32,7 @@ export const load: PageLoad = async ({ params }) => {
 
     // If no token from tokenStore, we assume this is a fresh room creation or join
     if (!token) {
-        throw error(403, "No token provided. Please join a room first.");
+        throw error(403, "You need to join or create a room.");
     }
 
     try {
