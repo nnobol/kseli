@@ -44,7 +44,7 @@ export class ChatWebSocketClient {
                 console.error("Error parsing WebSocket message:", error);
             }
         } else {
-            // means we received ping
+            // binary data - means we received ping
             this.sendPong();
         }
     }

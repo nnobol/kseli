@@ -55,6 +55,13 @@ func main() {
 		middleware.ValidateOrigin(),
 	))
 
+	// DELETE request to close the chat room
+	mux.Handle("DELETE /api/rooms/{roomID}", middleware.WithMiddleware(
+		handlers.DeleteRoomHandler(rs),
+		middleware.ValidateTokenFromHeader(),
+		middleware.ValidateOrigin(),
+	))
+
 	mux.Handle("/ws/room", handlers.RoomWebSocketHandler(rs))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

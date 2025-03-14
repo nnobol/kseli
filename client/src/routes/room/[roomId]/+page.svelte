@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { page } from "$app/state";
     import { beforeNavigate } from "$app/navigation";
     import ChatRoom from "$lib/chat/ChatRoom.svelte";
     import { initChatSession, endChatSession } from "$lib/stores/chatStore";
+    import { closeRoom } from "$lib/api/rooms";
 
     let { data } = $props();
 
@@ -13,7 +13,11 @@
 
     beforeNavigate(({ type }) => {
         if (type === "popstate") {
-            endChatSession();
+            if (data.roomDetails.userRole === 1) {
+                closeRoom();
+            } else {
+                endChatSession();
+            }
         }
     });
 </script>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { endChatSession } from "$lib/stores/chatStore";
+    import { closeRoom } from "$lib/api/rooms";
 
     interface Props {
         secretKey?: string;
@@ -7,16 +8,21 @@
     }
 
     let { secretKey, currentUserRole }: Props = $props();
+
+    async function handleClose() {
+        await closeRoom();
+    }
 </script>
 
 <div class="room-control">
-    {#if currentUserRole == 1}
+    {#if currentUserRole === 1}
         <p>Key: {secretKey}</p>
     {/if}
     <div class="button-wrapper">
-        <button onclick={() => endChatSession()}>Leave Room</button>
-        {#if currentUserRole == 1}
-            <button>Close Room</button>
+        {#if currentUserRole === 1}
+            <button onclick={() => handleClose()}>Close Room</button>
+        {:else}
+            <button onclick={() => endChatSession()}>Leave Room</button>
         {/if}
     </div>
 </div>

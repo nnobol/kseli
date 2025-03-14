@@ -26,7 +26,6 @@ export const load: PageLoad = async ({ params }) => {
 
     // Navigation to a different room from the same tab
     if (activeRoomId && (activeRoomId !== roomId)) {
-        sessionStorage.clear();
         throw error(500, "You tried navigating to a different chat room which closed the room.");
     }
 

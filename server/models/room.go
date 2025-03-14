@@ -12,12 +12,13 @@ import (
 )
 
 type Room struct {
-	Mu              sync.RWMutex     `json:"-"`
-	NextUserId      uint8            `json:"-"`
-	RoomID          string           `json:"id"`
-	MaxParticipants uint8            `json:"maxParticipants"`
-	SecretKey       *string          `json:"secretKey,omitempty"`
-	Participants    map[string]*User `json:"participants"`
+	Mu              sync.RWMutex        `json:"-"`
+	NextUserId      uint8               `json:"-"`
+	RoomID          string              `json:"id"`
+	MaxParticipants uint8               `json:"maxParticipants"`
+	SecretKey       *string             `json:"secretKey,omitempty"`
+	Participants    map[string]*User    `json:"participants"`
+	OnClose         func(roomID string) `json:"-"`
 }
 
 type WSMessage struct {
@@ -70,6 +71,34 @@ func (r *Room) Kick(targetUserID uint8) error {
 	go r.broadcastLeave(targetUser.ID)
 
 	return nil
+}
+
+func (r *Room) Close(roomID string) {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	for _, user := range r.Participants {
+		if user.WSConnection != nil {
+			if user.Role == Admin {
+				wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-admin"))
+			} else {
+				wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-user"))
+			}
+			user.WSConnection.Close()
+			user.WSConnection = nil
+		}
+
+		if user.MessageQueue != nil {
+			close(user.MessageQueue)
+			user.MessageQueue = nil
+		}
+
+		delete(r.Participants, user.SessionId)
+	}
+
+	if r.OnClose != nil {
+		go r.OnClose(r.RoomID)
+	}
 }
 
 // make sure caller locks room for reading
@@ -227,6 +256,7 @@ func (r *Room) handleWrite(conn net.Conn, username string, queue <-chan []byte, 
 				return
 			}
 
+			// what happens if this fails, we don't clean up here so need to make sure to clean up resources
 			if err := wsutil.WriteServerMessage(conn, ws.OpText, msg); err != nil {
 				return
 			}
@@ -273,29 +303,32 @@ func (r *Room) broadcastLeave(userID uint8) {
 }
 
 func (r *Room) removeUserFromRoom(username string) {
-	r.Mu.Lock()
-	defer r.Mu.Unlock()
-
+	r.Mu.RLock()
 	user, exists := r.GetUserByUsername(username)
 	if !exists {
+		r.Mu.RUnlock()
 		return
 	}
+	r.Mu.RUnlock()
 
-	if user.WSConnection != nil {
-		user.WSConnection.Close()
-		user.WSConnection = nil
+	if user.Role == Admin {
+		r.Close(r.RoomID)
+	} else {
+		r.Mu.Lock()
+		defer r.Mu.Unlock()
+
+		if user.WSConnection != nil {
+			user.WSConnection.Close()
+			user.WSConnection = nil
+		}
+
+		if user.MessageQueue != nil {
+			close(user.MessageQueue)
+			user.MessageQueue = nil
+		}
+
+		delete(r.Participants, user.SessionId)
+
+		go r.broadcastLeave(user.ID)
 	}
-
-	if user.MessageQueue != nil {
-		close(user.MessageQueue)
-		user.MessageQueue = nil
-	}
-
-	fmt.Printf("r.Participants: %v\n", r.Participants)
-
-	delete(r.Participants, user.SessionId)
-
-	fmt.Printf("r.Participants: %v\n", r.Participants)
-
-	go r.broadcastLeave(user.ID)
 }

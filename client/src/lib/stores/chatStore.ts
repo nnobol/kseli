@@ -1,5 +1,7 @@
 import { writable } from "svelte/store";
 import { ChatWebSocketClient } from "$lib/api/ws";
+import { goto } from "$app/navigation";
+import { errorStore } from "./errorStore";
 
 interface Message {
     username: string;
@@ -41,7 +43,12 @@ export function initChatSession(initialParticipants: Participant[], token: strin
             }
         });
         chatConnection.onClose((event) => {
-            console.log(event.code, event.reason)
+            if (event.code === 1000 && (event.reason === "kick" || event.reason === "ban" || event.reason === "close-user")) {
+                errorStore.set(event.reason);
+            } else if (event.code !== 1000) {
+                errorStore.set("error")
+            }
+            endChatSession();
         })
     }
 }
@@ -60,5 +67,6 @@ export function endChatSession() {
         chatConnection = null;
         messages.set([]);
         participants.set([]);
+        goto("/");
     }
 }

@@ -89,41 +89,6 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
     }
 }
 
-export interface KickUserPayload {
-    userId: number;
-}
-
-export async function kickUser(payload: KickUserPayload): Promise<void> {
-    try {
-        const token = getItemFromSessionStorage("token");
-        const roomId = getItemFromSessionStorage("activeRoomId")
-
-        const response = await fetch(`/api/rooms/${roomId!}/kick`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token!
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (response.status === 204) {
-            return;
-        }
-
-        const responseBody = await response.json();
-        throw responseBody as RoomErrorResponse;
-    } catch (err) {
-        if (err instanceof Error) {
-            throw {
-                errorMessage: "An unexpected server error occurred. Please try again later.",
-            } as RoomErrorResponse;
-        }
-
-        throw err as RoomErrorResponse;
-    }
-}
-
 export interface Participant {
     id: number;
     username: string;
@@ -165,6 +130,71 @@ export async function getRoom(roomId: string, token: string): Promise<GetRoomOkR
             throw {
                 errorMessage: "An unexpected server error occurred. Please try again later.",
                 statusCode: 500,
+            } as RoomErrorResponse;
+        }
+
+        throw err as RoomErrorResponse;
+    }
+}
+
+export async function closeRoom(): Promise<void> {
+    try {
+        const token = getItemFromSessionStorage("token");
+        const roomId = getItemFromSessionStorage("activeRoomId")
+
+        const response = await fetch(`/api/rooms/${roomId!}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token!
+            }
+        });
+
+        if (response.status === 204) {
+            return;
+        }
+
+        const responseBody = await response.json();
+        throw responseBody as RoomErrorResponse;
+    } catch (err) {
+        if (err instanceof Error) {
+            throw {
+                errorMessage: "An unexpected server error occurred. Please try again later.",
+            } as RoomErrorResponse;
+        }
+
+        throw err as RoomErrorResponse;
+    }
+}
+
+export interface KickUserPayload {
+    userId: number;
+}
+
+export async function kickUser(payload: KickUserPayload): Promise<void> {
+    try {
+        const token = getItemFromSessionStorage("token");
+        const roomId = getItemFromSessionStorage("activeRoomId")
+
+        const response = await fetch(`/api/rooms/${roomId!}/kick`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token!
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (response.status === 204) {
+            return;
+        }
+
+        const responseBody = await response.json();
+        throw responseBody as RoomErrorResponse;
+    } catch (err) {
+        if (err instanceof Error) {
+            throw {
+                errorMessage: "An unexpected server error occurred. Please try again later.",
             } as RoomErrorResponse;
         }
 

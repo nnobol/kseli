@@ -29,6 +29,9 @@ func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) 
 		MaxParticipants: maxParticipants,
 		SecretKey:       &roomSecretKey,
 		Participants:    make(map[string]*models.User, maxParticipants),
+		OnClose: func(roomID string) {
+			s.DeleteRoom(roomID)
+		},
 	}
 
 	room.Participants[adminUser.SessionId] = adminUser
@@ -46,6 +49,12 @@ func (s *MainStorage) GetRoom(roomID string) (*models.Room, bool) {
 	s.mu.RUnlock()
 
 	return room, exists
+}
+
+func (s *MainStorage) DeleteRoom(roomID string) {
+	s.mu.Lock()
+	delete(s.rooms, roomID)
+	s.mu.Unlock()
 }
 
 func generateUniqueRoomID(s *MainStorage) string {

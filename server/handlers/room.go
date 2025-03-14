@@ -119,6 +119,28 @@ func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 	}
 }
 
+func DeleteRoomHandler(rs *services.RoomService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		roomID := r.PathValue("roomID")
+
+		userClaims, ok := r.Context().Value(models.UserClaimsKey).(*models.Claims)
+		if !ok || userClaims == nil {
+			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Unauthorized.")
+			return
+		}
+
+		errResp := rs.DeleteRoom(roomID, userClaims)
+
+		if errResp != nil {
+			utils.WriteErrorResponse(w, errResp)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func RoomWebSocketHandler(rs *services.RoomService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, _, _, err := ws.HTTPUpgrader{

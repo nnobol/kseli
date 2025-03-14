@@ -2,9 +2,13 @@
     import CreateChatRoomModal from "$lib/modals/CreateChatRoomModal.svelte";
     import JoinChatRoomModal from "$lib/modals/JoinChatRoomModal.svelte";
     import Footer from "$lib/common/Footer.svelte";
+    import ErrorAlert from "$lib/modals/error-alert/ErrorAlert.svelte";
 
-    let isCreateModalOpen: boolean = false;
-    let isJoinModalOpen: boolean = false;
+    let { data } = $props();
+
+    let errorMessage = $state(data.errorMessage);
+    let isCreateModalOpen = $state(false);
+    let isJoinModalOpen = $state(false);
 
     function openCreateModal(): void {
         isCreateModalOpen = true;
@@ -58,6 +62,10 @@
 </main>
 
 <Footer isErrorPage={false} />
+
+{#if errorMessage}
+    <ErrorAlert {errorMessage} clearErrorMessage={() => (errorMessage = "")} />
+{/if}
 
 <style>
     main {

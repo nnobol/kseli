@@ -204,7 +204,7 @@ func (rs *RoomService) KickUser(roomID string, targetUserID uint8, userClaims *m
 	err := room.Kick(targetUserID)
 	if err != nil {
 		return &api.ErrorResponse{
-			StatusCode:   http.StatusBadRequest,
+			StatusCode:   http.StatusInternalServerError,
 			ErrorMessage: err.Error(),
 		}
 	}
@@ -246,6 +246,37 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 		Participants:    participants,
 		SecretKey:       secretKey,
 	}, nil
+}
+
+func (rs *RoomService) DeleteRoom(roomID string, userClaims *models.Claims) *api.ErrorResponse {
+	room, exists := rs.s.GetRoom(roomID)
+	if !exists {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusNotFound,
+			ErrorMessage: "Chat Room not found.",
+		}
+	}
+
+	// edge case: room might get deleted by some go routine and panic on room.RoomID
+	if userClaims.RoomID != room.RoomID {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You do not have access to this room.",
+		}
+	}
+
+	if userClaims.Role != models.Admin {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You are not an admin and can't close this room.",
+		}
+	}
+
+	room.Close(roomID)
+
+	rs.s.DeleteRoom(roomID)
+
+	return nil
 }
 
 func (rs *RoomService) HandleRoomWSConnection(conn net.Conn, roomID, username string) {

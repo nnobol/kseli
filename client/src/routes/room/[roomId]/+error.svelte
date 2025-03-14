@@ -1,7 +1,16 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
     import Footer from "$lib/common/Footer.svelte";
+    import { getItemFromSessionStorage } from "$lib/api/utils";
+
+    let isSameSession = false;
+
+    onMount(() => {
+        isSameSession = !!getItemFromSessionStorage("activeRoomId");
+        sessionStorage.clear();
+    });
 </script>
 
 <main>
