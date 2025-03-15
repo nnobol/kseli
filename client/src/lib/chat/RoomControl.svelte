@@ -9,6 +9,7 @@
 
     let { secretKey, currentUserRole }: Props = $props();
 
+    // handle errors and display them somehow
     async function handleClose() {
         await closeRoom();
     }

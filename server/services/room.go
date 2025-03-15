@@ -112,7 +112,16 @@ func (rs *RoomService) JoinRoom(roomID, username, secretKey, sessionID string) (
 		}
 	}
 
-	// no need to lock for MaxParticipants, is an immutable field, won't be concurrently modified
+	if _, userIsBanned := room.BannedUsers[sessionID]; userIsBanned {
+		room.Mu.RUnlock()
+		fieldErrors["roomId"] = "You are banned from this room."
+		return nil, &api.ErrorResponse{
+			StatusCode:  http.StatusBadRequest,
+			FieldErrors: fieldErrors,
+		}
+	}
+
+	// no need to lock for MaxParticipants, is an immutable field, won't be concurrently modified unless room gets deleted or something
 	// need to think of how to optimize
 	if uint8(len(room.Participants)) == room.MaxParticipants {
 		room.Mu.RUnlock()
@@ -202,6 +211,48 @@ func (rs *RoomService) KickUser(roomID string, targetUserID uint8, userClaims *m
 	}
 
 	err := room.Kick(targetUserID)
+	if err != nil {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusInternalServerError,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	return nil
+}
+
+func (rs *RoomService) BanUser(roomID string, targetUserID uint8, userClaims *models.Claims) *api.ErrorResponse {
+	room, exists := rs.s.GetRoom(roomID)
+	if !exists {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusNotFound,
+			ErrorMessage: "Chat Room not found.",
+		}
+	}
+
+	// edge case: room might get deleted by some go routine and panic on room.RoomID
+	if userClaims.RoomID != room.RoomID {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You do not have access to this room.",
+		}
+	}
+
+	if userClaims.Role != models.Admin {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusForbidden,
+			ErrorMessage: "You are not an admin and can't ban anyone from this room.",
+		}
+	}
+
+	if targetUserID == 0 {
+		return &api.ErrorResponse{
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "Target User ID not sent in the request.",
+		}
+	}
+
+	err := room.Ban(targetUserID)
 	if err != nil {
 		return &api.ErrorResponse{
 			StatusCode:   http.StatusInternalServerError,

@@ -12,7 +12,7 @@ type JoinRoomRequest struct {
 	RoomSecretKey string `json:"roomSecretKey"`
 }
 
-type KickUserRequest struct {
+type UserRequest struct {
 	TargetUserID uint8 `json:"userId"`
 }
 

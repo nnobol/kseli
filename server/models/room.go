@@ -17,7 +17,8 @@ type Room struct {
 	RoomID          string              `json:"id"`
 	MaxParticipants uint8               `json:"maxParticipants"`
 	SecretKey       *string             `json:"secretKey,omitempty"`
-	Participants    map[string]*User    `json:"participants"`
+	Participants    map[string]*User    `json:"participants"` // sessionID -> User
+	BannedUsers     map[string]struct{} `json:"-"`            // sessionID
 	OnClose         func(roomID string) `json:"-"`
 }
 
@@ -65,6 +66,42 @@ func (r *Room) Kick(targetUserID uint8) error {
 		close(targetUser.MessageQueue)
 		targetUser.MessageQueue = nil
 	}
+
+	delete(r.Participants, targetUser.SessionId)
+
+	go r.broadcastLeave(targetUser.ID)
+
+	return nil
+}
+
+func (r *Room) Ban(targetUserID uint8) error {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	targetUser, exists := r.GetUserByID(targetUserID)
+	if !exists {
+		return fmt.Errorf("User with ID '%d' not found in room", targetUserID)
+	}
+
+	_, alreadyBanned := r.BannedUsers[targetUser.SessionId]
+	if alreadyBanned {
+		return fmt.Errorf("User with ID '%d' is already banned", targetUserID)
+	}
+
+	if targetUser.WSConnection != nil {
+
+		wsutil.WriteServerMessage(targetUser.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "ban"))
+
+		targetUser.WSConnection.Close()
+		targetUser.WSConnection = nil
+	}
+
+	if targetUser.MessageQueue != nil {
+		close(targetUser.MessageQueue)
+		targetUser.MessageQueue = nil
+	}
+
+	r.BannedUsers[targetUser.SessionId] = struct{}{}
 
 	delete(r.Participants, targetUser.SessionId)
 

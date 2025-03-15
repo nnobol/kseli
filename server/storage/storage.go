@@ -29,6 +29,7 @@ func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) 
 		MaxParticipants: maxParticipants,
 		SecretKey:       &roomSecretKey,
 		Participants:    make(map[string]*models.User, maxParticipants),
+		BannedUsers:     make(map[string]struct{}),
 		OnClose: func(roomID string) {
 			s.DeleteRoom(roomID)
 		},

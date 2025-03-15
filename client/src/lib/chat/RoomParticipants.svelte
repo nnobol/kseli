@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { kickUser, type Participant } from "$lib/api/rooms";
+    import { kickUser, banUser, type Participant } from "$lib/api/rooms";
     import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
 
     interface Props {
@@ -18,8 +18,16 @@
         return role === 1 ? "Admin" : "User";
     }
 
+    // handle errors and display them somehow
     async function handleKick(userId: number) {
         await kickUser({
+            userId: userId,
+        });
+    }
+
+    // handle errors and display them somehow
+    async function handleBan(userId: number) {
+        await banUser({
             userId: userId,
         });
     }
@@ -51,7 +59,7 @@
                             </button>
                         </TooltipWrapper>
                         <TooltipWrapper content="Ban User">
-                            <button>
+                            <button onclick={() => handleBan(participant.id)}>
                                 <img src="/ban-icon.svg" alt="Ban" />
                             </button>
                         </TooltipWrapper>

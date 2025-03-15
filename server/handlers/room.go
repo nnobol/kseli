@@ -71,7 +71,7 @@ func JoinRoomHandler(rs *services.RoomService) http.HandlerFunc {
 
 func KickUserHandler(rs *services.RoomService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req api.KickUserRequest
+		var req api.UserRequest
 
 		roomID := r.PathValue("roomID")
 
@@ -87,6 +87,34 @@ func KickUserHandler(rs *services.RoomService) http.HandlerFunc {
 		}
 
 		errResp := rs.KickUser(roomID, req.TargetUserID, userClaims)
+
+		if errResp != nil {
+			utils.WriteErrorResponse(w, errResp)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func BanUserHandler(rs *services.RoomService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req api.UserRequest
+
+		roomID := r.PathValue("roomID")
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid JSON request body.")
+			return
+		}
+
+		userClaims, ok := r.Context().Value(models.UserClaimsKey).(*models.Claims)
+		if !ok || userClaims == nil {
+			utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Unauthorized.")
+			return
+		}
+
+		errResp := rs.BanUser(roomID, req.TargetUserID, userClaims)
 
 		if errResp != nil {
 			utils.WriteErrorResponse(w, errResp)

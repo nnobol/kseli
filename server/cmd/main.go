@@ -48,6 +48,13 @@ func main() {
 		middleware.ValidateOrigin(),
 	))
 
+	// POST request to ban a user from a chat room
+	mux.Handle("POST /api/rooms/{roomID}/ban", middleware.WithMiddleware(
+		handlers.BanUserHandler(rs),
+		middleware.ValidateTokenFromHeader(),
+		middleware.ValidateOrigin(),
+	))
+
 	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
 		handlers.GetRoomHandler(rs),
