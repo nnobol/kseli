@@ -4,9 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"sync"
+	"time"
 
 	"kseli-server/models"
 )
+
+var cleanupChan = make(chan string, 50)
 
 type MainStorage struct {
 	mu    sync.RWMutex
@@ -14,9 +17,13 @@ type MainStorage struct {
 }
 
 func InitializeStorage() *MainStorage {
-	return &MainStorage{
+	storage := &MainStorage{
 		rooms: make(map[string]*models.Room),
 	}
+
+	go storage.cleanupRooms()
+
+	return storage
 }
 
 func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) string {
@@ -33,6 +40,9 @@ func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) 
 		OnClose: func(roomID string) {
 			s.DeleteRoom(roomID)
 		},
+		OnExpire: time.AfterFunc(30*time.Minute, func() {
+			cleanupChan <- roomID
+		}),
 	}
 
 	room.Participants[adminUser.SessionId] = adminUser
@@ -66,6 +76,14 @@ func generateUniqueRoomID(s *MainStorage) string {
 
 		if !exists {
 			return roomID
+		}
+	}
+}
+
+func (s *MainStorage) cleanupRooms() {
+	for roomID := range cleanupChan {
+		if room, exists := s.GetRoom(roomID); exists {
+			room.Close(roomID, true)
 		}
 	}
 }

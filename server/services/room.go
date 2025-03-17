@@ -323,9 +323,7 @@ func (rs *RoomService) DeleteRoom(roomID string, userClaims *models.Claims) *api
 		}
 	}
 
-	room.Close(roomID)
-
-	rs.s.DeleteRoom(roomID)
+	room.Close(roomID, false)
 
 	return nil
 }

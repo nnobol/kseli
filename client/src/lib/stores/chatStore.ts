@@ -43,7 +43,7 @@ export function initChatSession(initialParticipants: Participant[], token: strin
             }
         });
         chatConnection.onClose((event) => {
-            if (event.code === 1000 && (event.reason === "kick" || event.reason === "ban" || event.reason === "close-user")) {
+            if (event.code === 1000 && (event.reason === "kick" || event.reason === "ban" || event.reason === "close-user" || event.reason === "close")) {
                 errorStore.set(event.reason);
             } else if (event.code !== 1000) {
                 errorStore.set("error")

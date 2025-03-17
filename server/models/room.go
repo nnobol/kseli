@@ -20,6 +20,7 @@ type Room struct {
 	Participants    map[string]*User    `json:"participants"` // sessionID -> User
 	BannedUsers     map[string]struct{} `json:"-"`            // sessionID
 	OnClose         func(roomID string) `json:"-"`
+	OnExpire        *time.Timer         `json:"-"`
 }
 
 type WSMessage struct {
@@ -110,16 +111,20 @@ func (r *Room) Ban(targetUserID uint8) error {
 	return nil
 }
 
-func (r *Room) Close(roomID string) {
+func (r *Room) Close(roomID string, isScheduledCleanup bool) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
 	for _, user := range r.Participants {
 		if user.WSConnection != nil {
-			if user.Role == Admin {
-				wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-admin"))
+			if isScheduledCleanup {
+				wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close"))
 			} else {
-				wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-user"))
+				if user.Role == Admin {
+					wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-admin"))
+				} else {
+					wsutil.WriteServerMessage(user.WSConnection, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "close-user"))
+				}
 			}
 			user.WSConnection.Close()
 			user.WSConnection = nil
@@ -133,9 +138,7 @@ func (r *Room) Close(roomID string) {
 		delete(r.Participants, user.SessionId)
 	}
 
-	if r.OnClose != nil {
-		go r.OnClose(r.RoomID)
-	}
+	r.OnClose(r.RoomID)
 }
 
 // make sure caller locks room for reading
@@ -349,7 +352,7 @@ func (r *Room) removeUserFromRoom(username string) {
 	r.Mu.RUnlock()
 
 	if user.Role == Admin {
-		r.Close(r.RoomID)
+		r.Close(r.RoomID, false)
 	} else {
 		r.Mu.Lock()
 		defer r.Mu.Unlock()

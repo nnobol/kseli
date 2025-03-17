@@ -15,6 +15,8 @@ export const load: PageLoad = async () => {
         errorMessage = "You have been banned from the chat room."
     } else if (error === "close-user") {
         errorMessage = "The admin has closed the chat room."
+    } else if (error === "close") {
+        errorMessage = "The chat room closed because the time ran out."
     } else if (error === "error") {
         errorMessage = "An unexpected server error occured."
     }
