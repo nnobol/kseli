@@ -2,7 +2,7 @@
     import CreateChatRoomModal from "$lib/modals/CreateChatRoomModal.svelte";
     import JoinChatRoomModal from "$lib/modals/JoinChatRoomModal.svelte";
     import Footer from "$lib/common/Footer.svelte";
-    import ErrorAlert from "$lib/modals/error-alert/ErrorAlert.svelte";
+    import ErrorAlert from "$lib/common/error-alert/ErrorAlert.svelte";
 
     let { data } = $props();
 

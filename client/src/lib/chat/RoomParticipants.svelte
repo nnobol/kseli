@@ -1,6 +1,7 @@
 <script lang="ts">
     import { kickUser, banUser, type Participant } from "$lib/api/rooms";
     import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
+    import InlineErrorToast from "$lib/common/InlineErrorToast.svelte";
 
     interface Props {
         currentUserRole: number;
@@ -10,6 +11,9 @@
 
     let { currentUserRole, participants, maxParticipants }: Props = $props();
 
+    let errorMessage: string | null = $state(null);
+    let errorElement: HTMLElement | null = $state(null);
+
     function getRoleIcon(role: number) {
         return role === 1 ? "/admin-icon.svg" : "/user-icon.svg";
     }
@@ -18,18 +22,27 @@
         return role === 1 ? "Admin" : "User";
     }
 
-    // handle errors and display them somehow
-    async function handleKick(userId: number) {
-        await kickUser({
-            userId: userId,
-        });
+    async function handleKick(userId: number, event: MouseEvent) {
+        const targetElement = event.currentTarget as HTMLElement;
+        try {
+            await kickUser({ userId });
+            errorMessage = null;
+        } catch (err) {
+            errorMessage = "Failed to kick user.";
+            errorElement = targetElement;
+        }
     }
 
     // handle errors and display them somehow
-    async function handleBan(userId: number) {
-        await banUser({
-            userId: userId,
-        });
+    async function handleBan(userId: number, event: MouseEvent) {
+        const targetElement = event.currentTarget as HTMLElement;
+        try {
+            await banUser({ userId });
+            errorMessage = null;
+        } catch (err) {
+            errorMessage = "Failed to ban user.";
+            errorElement = targetElement;
+        }
     }
 </script>
 
@@ -54,12 +67,16 @@
                 {#if currentUserRole === 1 && participant.role !== 1}
                     <div class="admin-buttons">
                         <TooltipWrapper content="Kick User">
-                            <button onclick={() => handleKick(participant.id)}>
+                            <button
+                                onclick={(e) => handleKick(participant.id, e)}
+                            >
                                 <img src="/kick-icon.svg" alt="Kick" />
                             </button>
                         </TooltipWrapper>
                         <TooltipWrapper content="Ban User">
-                            <button onclick={() => handleBan(participant.id)}>
+                            <button
+                                onclick={(e) => handleBan(participant.id, e)}
+                            >
                                 <img src="/ban-icon.svg" alt="Ban" />
                             </button>
                         </TooltipWrapper>
@@ -68,6 +85,17 @@
             </li>
         {/each}
     </ul>
+
+    {#if errorMessage && errorElement}
+        <InlineErrorToast
+            message={errorMessage}
+            targetElement={errorElement}
+            clearError={() => {
+                errorMessage = null;
+                errorElement = null;
+            }}
+        />
+    {/if}
 </section>
 
 <style>

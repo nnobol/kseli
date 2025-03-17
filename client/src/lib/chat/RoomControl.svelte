@@ -1,6 +1,7 @@
 <script lang="ts">
     import { endChatSession } from "$lib/stores/chatStore";
     import { closeRoom } from "$lib/api/rooms";
+    import InlineErrorToast from "$lib/common/InlineErrorToast.svelte";
 
     interface Props {
         secretKey?: string;
@@ -9,9 +10,17 @@
 
     let { secretKey, currentUserRole }: Props = $props();
 
-    // handle errors and display them somehow
-    async function handleClose() {
-        await closeRoom();
+    let errorMessage: string | null = $state(null);
+    let errorElement: HTMLElement | null = $state(null);
+
+    async function handleClose(event: MouseEvent) {
+        const targetElement = event.currentTarget as HTMLElement;
+        try {
+            await closeRoom();
+        } catch (err) {
+            errorMessage = "Failed to close room.";
+            errorElement = targetElement;
+        }
     }
 </script>
 
@@ -21,11 +30,22 @@
     {/if}
     <div class="button-wrapper">
         {#if currentUserRole === 1}
-            <button onclick={() => handleClose()}>Close Room</button>
+            <button onclick={(e) => handleClose(e)}>Close Room</button>
         {:else}
             <button onclick={() => endChatSession()}>Leave Room</button>
         {/if}
     </div>
+
+    {#if errorMessage && errorElement}
+        <InlineErrorToast
+            message={errorMessage}
+            targetElement={errorElement}
+            clearError={() => {
+                errorMessage = null;
+                errorElement = null;
+            }}
+        />
+    {/if}
 </div>
 
 <style>

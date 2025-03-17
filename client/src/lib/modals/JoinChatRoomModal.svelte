@@ -3,7 +3,7 @@
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
     import FloatingInputField from "./fields/FloatingInputField.svelte";
-    import ErrorAlert from "./error-alert/ErrorAlert.svelte";
+    import ErrorAlert from "../common/error-alert/ErrorAlert.svelte";
     import { joinRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
     import type { JoinRoomPayload, RoomErrorResponse } from "$lib/api/rooms";

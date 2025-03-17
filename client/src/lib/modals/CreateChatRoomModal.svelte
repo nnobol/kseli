@@ -4,7 +4,7 @@
     import ModalFormLayout from "./ModalFormLayout.svelte";
     import FloatingInputField from "./fields/FloatingInputField.svelte";
     import RadioFieldMaxParticipants from "./fields/RadioFieldMaxParticipants.svelte";
-    import ErrorAlert from "./error-alert/ErrorAlert.svelte";
+    import ErrorAlert from "../common/error-alert/ErrorAlert.svelte";
     import { createRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
     import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
