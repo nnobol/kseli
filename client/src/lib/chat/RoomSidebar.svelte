@@ -7,16 +7,24 @@
         currentUserRole: number;
         participants: Participant[];
         maxParticipants: number;
+        expiresAt: number;
+        roomId: string;
         secretKey?: string;
     }
 
-    let { currentUserRole, participants, maxParticipants, secretKey }: Props =
-        $props();
+    let {
+        currentUserRole,
+        participants,
+        maxParticipants,
+        expiresAt,
+        roomId,
+        secretKey,
+    }: Props = $props();
 </script>
 
 <div class="room-sidebar">
     <RoomParticipants {currentUserRole} {participants} {maxParticipants} />
-    <RoomControl {secretKey} {currentUserRole} />
+    <RoomControl {expiresAt} {roomId} {secretKey} {currentUserRole} />
 </div>
 
 <style>

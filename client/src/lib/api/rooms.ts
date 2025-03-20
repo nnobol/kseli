@@ -99,6 +99,8 @@ export interface GetRoomOkResponse {
     userRole: number;
     maxParticipants: number;
     participants: Participant[];
+    expiresAt: number;
+    roomId: string;
     secretKey?: string;
 }
 

@@ -21,6 +21,7 @@ type Room struct {
 	BannedUsers     map[string]struct{} `json:"-"`            // sessionID
 	OnClose         func(roomID string) `json:"-"`
 	OnExpire        *time.Timer         `json:"-"`
+	ExpiresAt       int64               `json:"-"`
 }
 
 type WSMessage struct {

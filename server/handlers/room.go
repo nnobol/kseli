@@ -143,7 +143,7 @@ func GetRoomHandler(rs *services.RoomService) http.HandlerFunc {
 			return
 		}
 
-		utils.WriteSuccessResponse(w, http.StatusCreated, resp)
+		utils.WriteSuccessResponse(w, http.StatusOK, resp)
 	}
 }
 

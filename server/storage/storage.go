@@ -43,6 +43,7 @@ func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) 
 		OnExpire: time.AfterFunc(30*time.Minute, func() {
 			cleanupChan <- roomID
 		}),
+		ExpiresAt: time.Now().UTC().Add(30 * time.Minute).Unix(),
 	}
 
 	room.Participants[adminUser.SessionId] = adminUser

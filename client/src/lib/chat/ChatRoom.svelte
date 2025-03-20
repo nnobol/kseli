@@ -17,6 +17,8 @@
         currentUserRole={data.userRole}
         participants={$participants}
         maxParticipants={data.maxParticipants}
+        expiresAt={data.expiresAt}
+        roomId={data.roomId}
         secretKey={data.secretKey}
     />
 </main>

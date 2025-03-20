@@ -2,16 +2,53 @@
     import { endChatSession } from "$lib/stores/chatStore";
     import { closeRoom } from "$lib/api/rooms";
     import InlineErrorToast from "$lib/common/InlineErrorToast.svelte";
+    import { onMount, onDestroy } from "svelte";
 
     interface Props {
+        expiresAt: number;
+        roomId: string;
         secretKey?: string;
         currentUserRole: number;
     }
 
-    let { secretKey, currentUserRole }: Props = $props();
+    let { expiresAt, roomId, secretKey, currentUserRole }: Props = $props();
 
     let errorMessage: string | null = $state(null);
     let errorElement: HTMLElement | null = $state(null);
+    let remainingTime: string = $state("Loading...");
+    let intervalId: number;
+
+    function formatTime(totalSeconds: number): string {
+        if (totalSeconds <= 0) {
+            return "Expired";
+        }
+
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
+
+    function updateCountdown() {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = expiresAt - now;
+
+        if (diff <= 0) {
+            remainingTime = "Expired";
+            clearInterval(intervalId);
+        } else {
+            remainingTime = formatTime(diff);
+        }
+    }
+
+    onMount(() => {
+        updateCountdown();
+
+        intervalId = setInterval(updateCountdown, 1000);
+    });
+
+    onDestroy(() => {
+        clearInterval(intervalId);
+    });
 
     async function handleClose(event: MouseEvent) {
         const targetElement = event.currentTarget as HTMLElement;
@@ -25,6 +62,8 @@
 </script>
 
 <div class="room-control">
+    <p>Time Remaining: {remainingTime}</p>
+    <p>Room Id: {roomId}</p>
     {#if currentUserRole === 1}
         <p>Key: {secretKey}</p>
     {/if}
@@ -61,6 +100,7 @@
     }
 
     p {
+        font-size: 0.8rem;
         text-align: center;
     }
 

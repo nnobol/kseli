@@ -29,5 +29,7 @@ type GetRoomResponse struct {
 	UserRole        models.Role   `json:"userRole"`
 	MaxParticipants uint8         `json:"maxParticipants"`
 	Participants    []models.User `json:"participants"`
+	ExpiresAt       int64         `json:"expiresAt"`
+	RoomID          string        `json:"roomId"`
 	SecretKey       string        `json:"secretKey,omitempty"`
 }

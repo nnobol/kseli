@@ -295,6 +295,8 @@ func (rs *RoomService) GetRoom(roomID string, userClaims *models.Claims) (*api.G
 		UserRole:        userClaims.Role,
 		MaxParticipants: room.MaxParticipants,
 		Participants:    participants,
+		ExpiresAt:       room.ExpiresAt,
+		RoomID:          room.RoomID,
 		SecretKey:       secretKey,
 	}, nil
 }
