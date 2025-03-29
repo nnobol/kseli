@@ -1,6 +1,6 @@
 <script lang="ts">
     import ModalHeader from "./ModalHeader.svelte";
-    import SubmitButton from "../common/buttons/SubmitButton.svelte";
+    import SubmitButton from "../../components/buttons/SubmitButton.svelte";
     import { scale } from "svelte/transition";
     import type { Snippet } from "svelte";
 
@@ -43,7 +43,7 @@
         color: #32012f;
         padding: 1rem 2rem;
         border-radius: 8px;
-        max-width: 500px;
+        max-width: 25rem;
         width: 90%;
     }
 </style>

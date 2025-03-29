@@ -1,6 +1,5 @@
 <script lang="ts">
-    import CloseButton from "../common/buttons/CloseButton.svelte";
-    import { CloseButtonTypes } from "../common/buttons/types";
+    import CloseButton from "../../components/buttons/CloseButton.svelte";
 
     interface Props {
         headerTitle: string;
@@ -14,19 +13,13 @@
 <header>
     <h2 class="header-title {loading ? 'loading' : ''}">{headerTitle}</h2>
 
-    <CloseButton
-        onClick={closeModal}
-        disabled={loading}
-        buttonType={CloseButtonTypes.Modal}
-    />
+    <CloseButton onClick={closeModal} disabled={loading} buttonType="modal" />
 </header>
 
 <style>
     header {
         position: relative;
-        display: flex;
         justify-content: center;
-        align-items: center;
         margin-bottom: 2rem;
     }
 

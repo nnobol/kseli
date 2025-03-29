@@ -27,7 +27,10 @@ export function initChatSession(initialParticipants: Participant[], token: strin
             switch (message.type) {
                 case "msg":
                     const msgData = message.data as Message;
-                    messages.update((msgs) => [...msgs, msgData]);
+                    messages.update((msgs) => {
+                        msgs.push(msgData);
+                        return msgs.slice();
+                    });
                     break;
                 case "join":
                     const joinData = message.data as Participant;
@@ -43,7 +46,7 @@ export function initChatSession(initialParticipants: Participant[], token: strin
             }
         });
         chatConnection.onClose((event) => {
-            if (event.code === 1000 && (event.reason === "kick" || event.reason === "ban" || event.reason === "close-user" || event.reason === "close")) {
+            if (event.code === 1000) {
                 errorStore.set(event.reason);
             } else if (event.code !== 1000) {
                 errorStore.set("error")
@@ -57,7 +60,7 @@ export function sendMessage(content: string) {
     if (chatConnection) {
         chatConnection.send(content);
     } else {
-        console.warn("WebSocket not initialized, cannot send message");
+        throw new Error("Cannot send message, try refreshing.");
     }
 }
 

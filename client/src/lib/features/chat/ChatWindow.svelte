@@ -52,6 +52,7 @@
     }
 
     p {
+        font-size: 1rem;
         color: #24292f;
         margin: 0.1rem 0;
         word-break: break-word;

@@ -37,6 +37,7 @@
     @media (max-width: 768px) {
         .room-sidebar {
             gap: 0.2rem;
+            flex-direction: row;
         }
     }
 </style>

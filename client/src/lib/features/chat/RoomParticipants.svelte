@@ -1,7 +1,8 @@
 <script lang="ts">
     import { kickUser, banUser, type Participant } from "$lib/api/rooms";
-    import TooltipWrapper from "$lib/common/TooltipWrapper.svelte";
-    import InlineErrorToast from "$lib/common/InlineErrorToast.svelte";
+    import TooltipWrapper from "$lib/components/TooltipWrapper.svelte";
+    import InlineToast from "$lib/components/InlineToast.svelte";
+    import { tick } from "svelte";
 
     interface Props {
         currentUserRole: number;
@@ -11,8 +12,15 @@
 
     let { currentUserRole, participants, maxParticipants }: Props = $props();
 
-    let errorMessage: string | null = $state(null);
-    let errorElement: HTMLElement | null = $state(null);
+    let errors = $state<
+        {
+            id: number;
+            message: string;
+            element: HTMLElement;
+            visible: boolean;
+            timeout: number;
+        }[]
+    >([]);
 
     function getRoleIcon(role: number) {
         return role === 1 ? "/admin-icon.svg" : "/user-icon.svg";
@@ -22,27 +30,55 @@
         return role === 1 ? "Admin" : "User";
     }
 
-    async function handleKick(userId: number, event: MouseEvent) {
+    async function handleAction(
+        userId: number,
+        event: MouseEvent,
+        action: "kick" | "ban",
+    ) {
         const targetElement = event.currentTarget as HTMLElement;
+        if (errors.some((e) => e.element === targetElement)) return;
+
         try {
-            await kickUser({ userId });
-            errorMessage = null;
+            if (action === "kick") {
+                await kickUser({ userId });
+            } else if (action === "ban") {
+                await banUser({ userId });
+            }
         } catch (err) {
-            errorMessage = "Failed to kick user.";
-            errorElement = targetElement;
+            const errorId = Date.now();
+
+            errors = [
+                ...errors,
+                {
+                    id: errorId,
+                    message:
+                        action === "kick"
+                            ? "Failed to kick user."
+                            : "Failed to ban user.",
+                    element: targetElement,
+                    visible: false,
+                    timeout: 0,
+                },
+            ];
+
+            await tick();
+
+            errors = errors.map((error) =>
+                error.id === errorId ? { ...error, visible: true } : error,
+            );
+
+            setTimeout(() => {
+                errors = errors.map((error) =>
+                    error.id === errorId ? { ...error, visible: false } : error,
+                );
+            }, 1500);
         }
     }
 
-    // handle errors and display them somehow
-    async function handleBan(userId: number, event: MouseEvent) {
-        const targetElement = event.currentTarget as HTMLElement;
-        try {
-            await banUser({ userId });
-            errorMessage = null;
-        } catch (err) {
-            errorMessage = "Failed to ban user.";
-            errorElement = targetElement;
-        }
+    function clearError(index: number) {
+        const error = errors[index];
+        if (error.timeout) clearTimeout(error.timeout);
+        errors = errors.filter((_, i) => i !== index);
     }
 </script>
 
@@ -68,14 +104,16 @@
                     <div class="admin-buttons">
                         <TooltipWrapper content="Kick User">
                             <button
-                                onclick={(e) => handleKick(participant.id, e)}
+                                onclick={(e) =>
+                                    handleAction(participant.id, e, "kick")}
                             >
                                 <img src="/kick-icon.svg" alt="Kick" />
                             </button>
                         </TooltipWrapper>
                         <TooltipWrapper content="Ban User">
                             <button
-                                onclick={(e) => handleBan(participant.id, e)}
+                                onclick={(e) =>
+                                    handleAction(participant.id, e, "ban")}
                             >
                                 <img src="/ban-icon.svg" alt="Ban" />
                             </button>
@@ -86,16 +124,15 @@
         {/each}
     </ul>
 
-    {#if errorMessage && errorElement}
-        <InlineErrorToast
-            message={errorMessage}
-            targetElement={errorElement}
-            clearError={() => {
-                errorMessage = null;
-                errorElement = null;
-            }}
+    {#each errors as error, index (error.id)}
+        <InlineToast
+            typeError={true}
+            message={error.message}
+            targetElement={error.element}
+            visible={error.visible}
+            removeToast={() => clearError(index)}
         />
-    {/if}
+    {/each}
 </section>
 
 <style>
@@ -105,7 +142,7 @@
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 1rem;
+        padding: 0.5rem;
         background-color: #fff;
     }
 
@@ -114,7 +151,7 @@
         padding-bottom: 0.25rem;
         margin-bottom: 0.25rem;
         border-bottom: 1px solid #ddd;
-        font-size: 1.25rem;
+        font-size: 1rem;
         text-align: center;
     }
 
@@ -129,7 +166,7 @@
         display: flex;
         justify-content: space-between;
         gap: 1rem;
-        padding: 0.3rem;
+        padding: 0.2rem;
     }
 
     .participant-info {
@@ -138,13 +175,14 @@
     }
 
     .role-icon {
-        width: 1rem;
-        height: 1rem;
+        width: 0.8rem;
+        height: 0.8rem;
         display: block;
     }
 
     span {
-        line-height: 1rem;
+        font-size: 0.8rem;
+        line-height: 0.8rem;
     }
 
     .admin-buttons {
@@ -165,7 +203,7 @@
     }
 
     button img {
-        width: 1rem;
-        height: 1rem;
+        width: 0.8rem;
+        height: 0.8rem;
     }
 </style>

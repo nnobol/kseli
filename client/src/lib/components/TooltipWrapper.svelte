@@ -2,13 +2,13 @@
     import type { Snippet } from "svelte";
 
     interface Props {
-        content?: string;
-        offset?: number;
+        content: string;
         children: Snippet;
     }
 
-    let { content = "", offset = 10, children }: Props = $props();
+    let { content, children }: Props = $props();
 
+    const offset = 10;
     let x = $state(0);
     let y = $state(0);
     let visible = $state(false);
@@ -49,16 +49,13 @@
             newY = event.clientY - tooltipHeight - offset;
         }
 
-        newX = Math.max(0, newX);
-        newY = Math.max(0, newY);
-
         x = newX;
         y = newY;
     }
 </script>
 
 <div
-    class="wrapper"
+    class="child-wrapper"
     onmouseenter={handleMouseEnter}
     onmousemove={handleMouseMove}
     onmouseleave={handleMouseLeave}
@@ -70,6 +67,7 @@
         <div
             bind:this={tooltipRef}
             class="tooltip"
+            role="tooltip"
             style="top: {y}px; left: {x}px;"
         >
             {content}
@@ -78,20 +76,18 @@
 </div>
 
 <style>
-    .wrapper {
-        position: relative;
-        display: inline-block;
+    .child-wrapper {
+        display: contents;
     }
 
     .tooltip {
         position: fixed;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(36, 41, 47, 0.85);
         color: #f9f9f9;
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 5px;
         font-size: 0.8rem;
-        white-space: nowrap;
-        pointer-events: none;
         z-index: 1000;
+        white-space: nowrap;
     }
 </style>

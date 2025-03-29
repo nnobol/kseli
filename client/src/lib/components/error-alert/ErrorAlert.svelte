@@ -1,27 +1,20 @@
 <script lang="ts">
     import AlertWrapper from "./AlertWrapper.svelte";
-    import CloseButton from "../buttons/CloseButton.svelte"
-    import { CloseButtonTypes } from "../buttons/types"
+    import CloseButton from "../buttons/CloseButton.svelte";
 
     interface Props {
         errorMessage: string;
         clearErrorMessage: () => void;
-        closable?: boolean;
     }
 
-    let { errorMessage, clearErrorMessage, closable = true }: Props = $props();
+    let { errorMessage, clearErrorMessage }: Props = $props();
 </script>
 
 {#snippet errorAlert()}
     <section>
         <p>{errorMessage}</p>
 
-        {#if closable}
-            <CloseButton
-                onClick={clearErrorMessage}
-                buttonType={CloseButtonTypes.Error}
-            />
-        {/if}
+        <CloseButton onClick={clearErrorMessage} buttonType="error" />
     </section>
 {/snippet}
 
@@ -32,7 +25,6 @@
         display: flex;
         align-items: center;
         text-align: center;
-        justify-content: space-between;
         gap: 1rem;
 
         background: #ffe4e4;
@@ -40,7 +32,7 @@
         border: 1px solid #d8000c;
         border-radius: 8px;
         padding: 1rem 2rem;
-        max-width: 400px;
+        max-width: 20rem;
         width: 90%;
     }
 
@@ -51,6 +43,6 @@
         word-break: break-word;
         font-weight: bold;
         font-size: 1rem;
-        max-width: 300px;
+        max-width: 15rem;
     }
 </style>

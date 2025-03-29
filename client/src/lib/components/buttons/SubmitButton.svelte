@@ -29,11 +29,8 @@
         font-weight: bold;
         transition: opacity 0.2s ease;
         margin-top: 1.5rem;
-        display: inline-flex;
-        align-items: center;
         justify-content: center;
         min-width: 6rem;
-        min-height: 2.2rem;
     }
 
     .submit-button:hover {

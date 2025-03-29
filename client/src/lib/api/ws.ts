@@ -4,15 +4,11 @@ export interface WebSocketMessage {
 }
 
 type WsMessageCallback = (data: WebSocketMessage) => void;
-type WsEventCallback = () => void;
-type WsErrorCallback = (error: Event) => void;
 type WsCloseCallback = (event: CloseEvent) => void;
 
 export class ChatWebSocketClient {
     private ws: WebSocket;
     private messageListeners: WsMessageCallback[] = [];
-    private openListeners: WsEventCallback[] = [];
-    private errorListeners: WsErrorCallback[] = [];
     private closeListeners: WsCloseCallback[] = [];
 
     constructor(token: string) {
@@ -20,14 +16,8 @@ export class ChatWebSocketClient {
         this.ws = new WebSocket(url);
         this.ws.binaryType = "arraybuffer";
 
-        this.ws.onopen = this.handleOpen.bind(this);
         this.ws.onmessage = this.handleMessage.bind(this);
-        this.ws.onerror = this.handleError.bind(this);
         this.ws.onclose = this.handleClose.bind(this);
-    }
-
-    private handleOpen() {
-        this.openListeners.forEach((callback) => callback());
     }
 
     private sendPong() {
@@ -49,10 +39,6 @@ export class ChatWebSocketClient {
         }
     }
 
-    private handleError(event: Event) {
-        this.errorListeners.forEach((callback) => callback(event));
-    }
-
     private handleClose(event: CloseEvent) {
         this.closeListeners.forEach((callback) => callback(event));
     }
@@ -61,7 +47,7 @@ export class ChatWebSocketClient {
         if (this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(data);
         } else {
-            console.warn("WebSocket not open, cannot send:", data);
+            throw new Error("Cannot send message, try refreshing.");
         }
     }
 
@@ -71,14 +57,6 @@ export class ChatWebSocketClient {
 
     public onMessage(callback: WsMessageCallback): void {
         this.messageListeners.push(callback);
-    }
-
-    public onOpen(callback: WsEventCallback): void {
-        this.openListeners.push(callback);
-    }
-
-    public onError(callback: WsErrorCallback): void {
-        this.errorListeners.push(callback);
     }
 
     public onClose(callback: WsCloseCallback): void {

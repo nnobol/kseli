@@ -180,14 +180,14 @@ func RoomWebSocketHandler(rs *services.RoomService) http.HandlerFunc {
 
 		token := r.URL.Query().Get("token")
 		if token == "" {
-			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token"))
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token-missing"))
 			conn.Close()
 			return
 		}
 
 		claims, err := auth.ValidateToken(token)
 		if err != nil {
-			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token"))
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token-invalid"))
 			conn.Close()
 			return
 		}

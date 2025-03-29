@@ -1,5 +1,3 @@
-@import "./colors.css";
-
 *,
 *::before,
 *::after {
@@ -14,8 +12,8 @@ body {
     width: 100%;
     font-size: 20px;
     font-family: serif;
-    background-color: var(--main-background-color);
-    color: var(--main-text-color);
+    background-color: #1f011d;
+    color: #cbc6ac;
     display: flex;
     flex-direction: column;
 }

@@ -1,63 +1,43 @@
 <script lang="ts">
-    import CreateChatRoomModal from "$lib/modals/CreateChatRoomModal.svelte";
-    import JoinChatRoomModal from "$lib/modals/JoinChatRoomModal.svelte";
-    import Footer from "$lib/common/Footer.svelte";
-    import ErrorAlert from "$lib/common/error-alert/ErrorAlert.svelte";
+    import CreateChatRoomModal from "$lib/features/modals/CreateChatRoomModal.svelte";
+    import JoinChatRoomModal from "$lib/features/modals/JoinChatRoomModal.svelte";
+    import Footer from "$lib/components/Footer.svelte";
+    import ErrorAlert from "$lib/components/error-alert/ErrorAlert.svelte";
 
     let { data } = $props();
 
     let errorMessage = $state(data.errorMessage);
-    let isCreateModalOpen = $state(false);
-    let isJoinModalOpen = $state(false);
+    let activeModal = $state<"create" | "join" | null>(null);
 
-    function openCreateModal(): void {
-        isCreateModalOpen = true;
-    }
+    const modalComponents = {
+        create: CreateChatRoomModal,
+        join: JoinChatRoomModal,
+    };
 
-    function closeCreateModal(): void {
-        isCreateModalOpen = false;
-    }
-
-    function openJoinModal(): void {
-        isJoinModalOpen = true;
-    }
-
-    function closeJoinModal(): void {
-        isJoinModalOpen = false;
+    function toggleModal(modal: "create" | "join" | null): void {
+        if (activeModal && modal !== null) return;
+        activeModal = modal;
     }
 </script>
 
 <main>
     <h1>
-        <span class="highlight">Kseli</span> - private, secure and fast communication.
+        <span class="highlight">Kseli</span> - anonymous, temporary chat rooms.
     </h1>
 
-    <div class="button-container">
-        <button
-            class="join-chat-room"
-            onclick={() => {
-                if (!isCreateModalOpen) openJoinModal();
-            }}
-        >
+    <div class="btns">
+        <button class="join-btn" onclick={() => toggleModal("join")}>
             Join Chat Room
         </button>
 
-        <button
-            class="create-chat-room"
-            onclick={() => {
-                if (!isJoinModalOpen) openCreateModal();
-            }}
-        >
+        <button class="create-btn" onclick={() => toggleModal("create")}>
             Create Chat Room
         </button>
     </div>
 
-    {#if isCreateModalOpen}
-        <CreateChatRoomModal closeModal={closeCreateModal} />
-    {/if}
-
-    {#if isJoinModalOpen}
-        <JoinChatRoomModal closeModal={closeJoinModal} />
+    {#if activeModal}
+        {@const Modal = modalComponents[activeModal]}
+        <Modal closeModal={() => toggleModal(null)} />
     {/if}
 </main>
 
@@ -87,52 +67,46 @@
         font-size: 4rem;
     }
 
-    .button-container {
+    .btns {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
     }
 
-    .create-chat-room {
+    button {
         background-color: #1f011d;
-        color: #bcb594;
-        border: 2px solid #d26100;
         border-radius: 5px;
         font-size: 2rem;
         padding: 0.75rem 1.5rem;
         font-family: inherit;
         font-weight: bold;
-        transition:
-            color 0.3s ease,
-            border-color 0.3s ease,
-            transform 0.3s ease;
         cursor: pointer;
+        transition:
+            color 0.25s ease,
+            border-color 0.25s ease,
+            transform 0.25s ease;
     }
 
-    .create-chat-room:hover {
+    button:hover {
         transform: scale(1.05);
+    }
+
+    .create-btn {
+        color: #bcb594;
+        border: 2px solid #d26100;
+    }
+
+    .create-btn:hover {
         border-color: #ab4f00;
         color: #ada47c;
     }
 
-    .join-chat-room {
-        background-color: #1f011d;
+    .join-btn {
         color: #d26100;
         border: 2px solid #3a1f3b;
-        border-radius: 5px;
-        font-size: 2rem;
-        padding: 0.75rem 1.5rem;
-        font-family: inherit;
-        font-weight: bold;
-        transition:
-            color 0.3s ease,
-            border-color 0.3s ease,
-            transform 0.3s ease;
-        cursor: pointer;
     }
 
-    .join-chat-room:hover {
-        transform: scale(1.05);
+    .join-btn:hover {
         border-color: #2d182e;
         color: #ab4f00;
     }

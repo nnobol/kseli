@@ -2,9 +2,9 @@
     import { goto } from "$app/navigation";
     import ModalWrapper from "./ModalWrapper.svelte";
     import ModalFormLayout from "./ModalFormLayout.svelte";
-    import FloatingInputField from "./fields/FloatingInputField.svelte";
-    import RadioFieldMaxParticipants from "./fields/RadioFieldMaxParticipants.svelte";
-    import ErrorAlert from "../common/error-alert/ErrorAlert.svelte";
+    import FloatingInputField from "../../components/fields/FloatingInputField.svelte";
+    import RadioFieldMaxParticipants from "../../components/fields/RadioFieldMaxParticipants.svelte";
+    import ErrorAlert from "../../components/error-alert/ErrorAlert.svelte";
     import { createRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
     import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
@@ -45,8 +45,8 @@
             fieldErrors.username = "Username is required.";
         } else if (/\s/.test(username)) {
             fieldErrors.username = "Username cannot contain spaces.";
-        } else if (username.length < 5 || username.length > 20) {
-            fieldErrors.username = "Username must be 5-20 characters long.";
+        } else if (username.length < 3 || username.length > 15) {
+            fieldErrors.username = "Username must be 3-15 characters long.";
         } else {
             delete fieldErrors.username;
         }

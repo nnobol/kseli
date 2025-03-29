@@ -1,10 +1,8 @@
 <script lang="ts">
-    import { CloseButtonTypes } from "./types";
-
     interface Props {
         onClick: () => void;
         disabled?: boolean;
-        buttonType: CloseButtonTypes;
+        buttonType: "modal" | "error";
     }
 
     let { onClick, disabled = false, buttonType }: Props = $props();
@@ -43,8 +41,6 @@
 
     /* Styles for error alert close button */
     .error {
-        /* position: relative;
-        left: 1rem; */
         color: #d8000c;
     }
 </style>

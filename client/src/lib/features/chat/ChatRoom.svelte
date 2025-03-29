@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { GetRoomOkResponse } from "$lib/api/rooms";
-    import ChatContainer from "$lib/chat/ChatContainer.svelte";
-    import RoomSidebar from "$lib/chat/RoomSidebar.svelte";
+    import ChatContainer from "$lib/features/chat/ChatContainer.svelte";
+    import RoomSidebar from "$lib/features/chat/RoomSidebar.svelte";
     import { messages, participants } from "$lib/stores/chatStore";
 
     interface Props {
@@ -26,7 +26,6 @@
 <style>
     main {
         display: flex;
-        flex-direction: row;
         padding: 1rem;
         gap: 0.5rem;
     }
