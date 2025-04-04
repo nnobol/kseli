@@ -11,7 +11,7 @@ const config = {
 				pages: '../builds/client-new',
 				assets: '../builds/client-new',
 				fallback: 'index.html',
-				precompress: false,
+				precompress: true,
 				strict: false
 			}
 		)

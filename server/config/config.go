@@ -5,23 +5,16 @@ import (
 	"os"
 )
 
-type Config struct {
+var (
 	SecretKey string
 	APIKey    string
-}
-
-var GlobalConfig *Config
+)
 
 func LoadConfig() {
-	secretKey := os.Getenv("SECRET_KEY")
-	apiKey := os.Getenv("API_KEY")
+	SecretKey = os.Getenv("SECRET_KEY")
+	APIKey = os.Getenv("API_KEY")
 
-	if secretKey == "" || apiKey == "" {
+	if SecretKey == "" || APIKey == "" {
 		log.Fatal("Missing mandatory environment variables (SECRET_KEY, API_KEY)")
-	}
-
-	GlobalConfig = &Config{
-		SecretKey: secretKey,
-		APIKey:    apiKey,
 	}
 }

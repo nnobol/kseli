@@ -24,8 +24,8 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoom
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Api-Key': import.meta.env.VITE_API_KEY,
-                'X-User-Session-Id': sessionId
+                'X-API-Key': import.meta.env.VITE_API_KEY,
+                'X-Participant-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
         });
@@ -65,8 +65,8 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Api-Key': import.meta.env.VITE_API_KEY,
-                'X-User-Session-Id': sessionId
+                'X-API-Key': import.meta.env.VITE_API_KEY,
+                'X-Participant-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
         });

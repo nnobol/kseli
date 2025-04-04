@@ -1,24 +1,21 @@
 package storage
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"sync"
-	"time"
 
-	"kseli-server/models"
+	"kseli-server/features/chat"
 )
 
 var cleanupChan = make(chan string, 50)
 
 type MainStorage struct {
 	mu    sync.RWMutex
-	rooms map[string]*models.Room
+	rooms map[string]*chat.Room // key roomID
 }
 
 func InitializeStorage() *MainStorage {
 	storage := &MainStorage{
-		rooms: make(map[string]*models.Room),
+		rooms: make(map[string]*chat.Room),
 	}
 
 	go storage.cleanupRooms()
@@ -26,36 +23,13 @@ func InitializeStorage() *MainStorage {
 	return storage
 }
 
-func (s *MainStorage) CreateRoom(adminUser *models.User, maxParticipants uint8) string {
-	roomID := generateUniqueRoomID(s)
-	roomSecretKey := generateSecretKey()
-
-	room := &models.Room{
-		NextUserId:      2,
-		RoomID:          roomID,
-		MaxParticipants: maxParticipants,
-		SecretKey:       &roomSecretKey,
-		Participants:    make(map[string]*models.User, maxParticipants),
-		BannedUsers:     make(map[string]struct{}),
-		OnClose: func(roomID string) {
-			s.DeleteRoom(roomID)
-		},
-		OnExpire: time.AfterFunc(30*time.Minute, func() {
-			cleanupChan <- roomID
-		}),
-		ExpiresAt: time.Now().UTC().Add(30 * time.Minute).Unix(),
-	}
-
-	room.Participants[adminUser.SessionId] = adminUser
-
+func (s *MainStorage) AddRoom(roomID string, room *chat.Room) {
 	s.mu.Lock()
 	s.rooms[roomID] = room
 	s.mu.Unlock()
-
-	return roomID
 }
 
-func (s *MainStorage) GetRoom(roomID string) (*models.Room, bool) {
+func (s *MainStorage) GetRoom(roomID string) (*chat.Room, bool) {
 	s.mu.RLock()
 	room, exists := s.rooms[roomID]
 	s.mu.RUnlock()
@@ -69,34 +43,16 @@ func (s *MainStorage) DeleteRoom(roomID string) {
 	s.mu.Unlock()
 }
 
-func generateUniqueRoomID(s *MainStorage) string {
-	for {
-		roomID := generateRoomID()
-
-		_, exists := s.GetRoom(roomID)
-
-		if !exists {
-			return roomID
-		}
+func (s *MainStorage) RoomCleanupFunc() func(roomID string) {
+	return func(roomID string) {
+		cleanupChan <- roomID
 	}
 }
 
 func (s *MainStorage) cleanupRooms() {
 	for roomID := range cleanupChan {
 		if room, exists := s.GetRoom(roomID); exists {
-			room.Close(roomID, true)
+			room.Close(true)
 		}
 	}
-}
-
-func generateRoomID() string {
-	b := make([]byte, 8)
-	rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-func generateSecretKey() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
 }

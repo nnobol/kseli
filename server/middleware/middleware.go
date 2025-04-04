@@ -6,12 +6,10 @@ import (
 	"net/url"
 
 	"kseli-server/auth"
+	"kseli-server/common"
 	"kseli-server/config"
-	"kseli-server/handlers/utils"
-	"kseli-server/models"
 )
 
-// WithMiddleware chains multiple middleware functions around a base handler.
 func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
 	for _, middleware := range middlewares {
 		handler = middleware(handler)
@@ -20,8 +18,8 @@ func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http
 }
 
 func ValidateOrigin() func(http.Handler) http.Handler {
-	allowedOrigins := map[string]bool{
-		"localhost:8080": true,
+	allowedOrigins := map[string]struct{}{
+		"localhost:8080": {},
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -35,18 +33,18 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 			}
 
 			if origin == "" {
-				utils.WriteSimpleErrorMessage(w, http.StatusForbidden, "Missing Origin header")
+				common.WriteError(w, http.StatusForbidden, "Missing Origin header.")
 				return
 			}
 
 			originURL, err := url.Parse(origin)
 			if err != nil || originURL.Host == "" {
-				utils.WriteSimpleErrorMessage(w, http.StatusBadRequest, "Invalid Origin header")
+				common.WriteError(w, http.StatusBadRequest, "Invalid Origin header.")
 				return
 			}
 
-			if !allowedOrigins[originURL.Host] {
-				utils.WriteSimpleErrorMessage(w, http.StatusForbidden, "Origin does not match the requested host")
+			if _, ok := allowedOrigins[originURL.Host]; !ok {
+				common.WriteError(w, http.StatusForbidden, "Origin does not match the requested host.")
 				return
 			}
 
@@ -59,8 +57,8 @@ func ValidateAPIKey() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			apiKey := r.Header.Get("X-API-Key")
-			if apiKey == "" || apiKey != config.GlobalConfig.APIKey {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid or missing API key.")
+			if apiKey == "" || apiKey != config.APIKey {
+				common.WriteError(w, http.StatusUnauthorized, "Invalid or missing API key.")
 				return
 			}
 
@@ -69,38 +67,38 @@ func ValidateAPIKey() func(http.Handler) http.Handler {
 	}
 }
 
-func ValidateUserSessionID() func(http.Handler) http.Handler {
+func ValidateParticipantSessionID() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			sessionID := r.Header.Get("X-User-Session-Id")
+			sessionID := r.Header.Get("X-Participant-Session-Id")
 			if sessionID == "" {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid or missing Session Id.")
+				common.WriteError(w, http.StatusUnauthorized, "Invalid or missing Session Id.")
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), models.UserSessionIDKey, sessionID)
+			ctx := context.WithValue(r.Context(), auth.ParticipantSessionIDKey, sessionID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func ValidateTokenFromHeader() func(http.Handler) http.Handler {
+func ValidateToken() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := r.Header.Get("Authorization")
 			if token == "" {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Missing Authorization token.")
+				common.WriteError(w, http.StatusUnauthorized, "Missing Authorization token.")
 				return
 			}
 
 			claims, err := auth.ValidateToken(token)
 			if err != nil {
-				utils.WriteSimpleErrorMessage(w, http.StatusUnauthorized, "Invalid or expired token.")
+				common.WriteError(w, http.StatusUnauthorized, "Invalid or expired token.")
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), models.UserClaimsKey, &claims)
+			ctx := context.WithValue(r.Context(), auth.ParticipantClaimsKey, &claims)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
