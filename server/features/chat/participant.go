@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"kseli-server/common"
+	"kseli/common"
 )
 
 type Participant struct {

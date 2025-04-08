@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"kseli-server/auth"
-	"kseli-server/common"
+	"kseli/auth"
+	"kseli/common"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"

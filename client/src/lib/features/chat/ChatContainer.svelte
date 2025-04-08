@@ -26,7 +26,7 @@
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 1rem;
+        padding: 0.8rem;
         background-color: #f9f9f9;
     }
 </style>

@@ -5,14 +5,20 @@ import (
 	"os"
 )
 
+// Injected during the build for prod, taken from env variables for development
 var (
 	SecretKey string
 	APIKey    string
 )
 
 func LoadConfig() {
-	SecretKey = os.Getenv("SECRET_KEY")
-	APIKey = os.Getenv("API_KEY")
+	if SecretKey == "" {
+		SecretKey = os.Getenv("SECRET_KEY")
+	}
+
+	if APIKey == "" {
+		APIKey = os.Getenv("API_KEY")
+	}
 
 	if SecretKey == "" || APIKey == "" {
 		log.Fatal("Missing mandatory environment variables (SECRET_KEY, API_KEY)")

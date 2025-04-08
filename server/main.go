@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"kseli-server/config"
-	"kseli-server/features/chat"
-	"kseli-server/middleware"
-	"kseli-server/storage"
+	"kseli/config"
+	"kseli/features/chat"
+	"kseli/middleware"
+	"kseli/storage"
 )
 
 func main() {
@@ -22,7 +22,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	clientDir := "../builds/client"
+	env := os.Getenv("ENV")
+	clientDir := "./client"
+	if env == "local" {
+		clientDir = "../builds/client"
+	}
 
 	// POST request to create a chat room
 	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
@@ -107,14 +111,14 @@ func main() {
 	}))
 
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":3000",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
 	}
 
-	log.Println("Listening on :8080...")
+	log.Println("Listening on :3000...")
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}

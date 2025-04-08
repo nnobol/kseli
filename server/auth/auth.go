@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"kseli-server/common"
-	"kseli-server/config"
+	"kseli/common"
+	"kseli/config"
 )
 
 type contextKey string
@@ -73,26 +73,8 @@ func ValidateToken(token string) (Claims, error) {
 		return claims, errors.New("invalid payload encoding")
 	}
 
-	// Unmarshal the payload into a temporary struct to handle float64
-	var temp struct {
-		UserID   float64 `json:"userId"`
-		Username string  `json:"username"`
-		Role     float64 `json:"role"`
-		RoomID   string  `json:"roomId"`
-		Exp      int64   `json:"exp"`
-	}
-
-	if err := json.Unmarshal(payloadBytes, &temp); err != nil {
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 		return claims, errors.New("failed to parse claims")
-	}
-
-	// Convert UserID & Role from float64 to uint8
-	claims = Claims{
-		UserID:   uint8(temp.UserID),
-		Username: temp.Username,
-		Role:     common.Role(uint8(temp.Role)),
-		RoomID:   temp.RoomID,
-		Exp:      temp.Exp,
 	}
 
 	if time.Now().Unix() > claims.Exp {

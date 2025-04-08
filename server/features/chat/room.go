@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"kseli-server/common"
+	"kseli/common"
 )
 
 type Room struct {
@@ -190,13 +190,13 @@ func generateUniqueRoomID(s Storage) string {
 }
 
 func generateRoomID() string {
-	b := make([]byte, 8)
+	b := make([]byte, 6)
 	rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func generateSecretKey() string {
-	b := make([]byte, 16)
+	b := make([]byte, 10)
 	rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }

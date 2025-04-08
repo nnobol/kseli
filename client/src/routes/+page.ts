@@ -1,3 +1,5 @@
+export const ssr = false;
+
 import { errorStore } from '$lib/stores/errorStore';
 import { get } from 'svelte/store';
 import type { PageLoad } from './$types';

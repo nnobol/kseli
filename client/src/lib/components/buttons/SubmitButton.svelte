@@ -31,6 +31,7 @@
         margin-top: 1.5rem;
         justify-content: center;
         min-width: 6rem;
+        display: inline-flex;
     }
 
     .submit-button:hover {

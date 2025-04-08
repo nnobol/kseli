@@ -26,14 +26,14 @@
 <style>
     main {
         display: flex;
-        padding: 1rem;
+        padding: 0.75rem;
         gap: 0.5rem;
     }
 
     @media (max-width: 768px) {
         main {
             flex-direction: column;
-            padding: 0.5rem;
+            padding: 0.375rem;
             gap: 0.25rem;
         }
     }

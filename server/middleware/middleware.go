@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"kseli-server/auth"
-	"kseli-server/common"
-	"kseli-server/config"
+	"kseli/auth"
+	"kseli/common"
+	"kseli/config"
 )
 
 func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
@@ -19,7 +19,9 @@ func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http
 
 func ValidateOrigin() func(http.Handler) http.Handler {
 	allowedOrigins := map[string]struct{}{
-		"localhost:8080": {},
+		"localhost:3000": {},
+		"kseli.app":      {},
+		"www.kseli.app":  {},
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -44,7 +46,7 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 			}
 
 			if _, ok := allowedOrigins[originURL.Host]; !ok {
-				common.WriteError(w, http.StatusForbidden, "Origin does not match the requested host.")
+				common.WriteError(w, http.StatusForbidden, "Origin not allowed. Access from this origin is restricted.")
 				return
 			}
 

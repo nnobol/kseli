@@ -1,9 +1,12 @@
+export const ssr = false;
+
 import type { PageLoad } from './$types'
 import { getRoom } from '$lib/api/rooms';
 import { error } from '@sveltejs/kit';
 import { tokenStore } from '$lib/stores/tokenStore';
 import { get } from 'svelte/store';
 import { getItemFromSessionStorage, setItemInSessionStorage } from '$lib/api/utils';
+import { useMocks } from '$lib/env';
 
 export const load: PageLoad = async ({ params }) => {
     const roomId = params.roomId;
@@ -31,7 +34,11 @@ export const load: PageLoad = async ({ params }) => {
 
     // If no token from tokenStore, we assume this is a fresh room creation or join
     if (!token) {
-        throw error(403, "You need to join or create a room.");
+        if (useMocks) {
+            token = "mock-token";
+        } else {
+            throw error(403, "You need to join or create a room.");
+        }
     }
 
     try {

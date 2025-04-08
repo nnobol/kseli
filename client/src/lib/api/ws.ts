@@ -1,12 +1,19 @@
+export interface IChatWebSocketClient {
+    onMessage(callback: WsMessageCallback): void;
+    onClose(callback: WsCloseCallback): void;
+    send(data: string): void;
+    close(code?: number, reason?: string): void;
+}
+
 export interface WebSocketMessage {
     type: string;
     data: Record<string, any>;
 }
 
-type WsMessageCallback = (data: WebSocketMessage) => void;
-type WsCloseCallback = (event: CloseEvent) => void;
+export type WsMessageCallback = (data: WebSocketMessage) => void;
+export type WsCloseCallback = (event: CloseEvent) => void;
 
-export class ChatWebSocketClient {
+export class ChatWebSocketClient implements IChatWebSocketClient {
     private ws: WebSocket;
     private messageListeners: WsMessageCallback[] = [];
     private closeListeners: WsCloseCallback[] = [];

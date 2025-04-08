@@ -116,32 +116,36 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <section>
     <div class="room-info">
-        <div class="room-element-wrapper">
-            <p>
-                <strong>Room:</strong>
-                <span
-                    class="copyable"
-                    onclick={(e) => copyToClipboard(e, roomId)}
-                >
-                    {roomId}
-                </span>
-            </p>
-            <p>|</p>
-            <TooltipWrapper content="Remaining Time">
-                <p>{remainingTime}</p>
-            </TooltipWrapper>
+        <div class="room-info-block">
+            <h3>Room Info</h3>
+            <div class="info-line">
+                <TooltipWrapper content="Room Id">
+                    <span
+                        class="copyable"
+                        onclick={(e) => copyToClipboard(e, roomId)}
+                    >
+                        {roomId}
+                    </span>
+                </TooltipWrapper>
+                <span class="separator">|</span>
+                <TooltipWrapper content="Remaining Time">
+                    <span>{remainingTime}</span>
+                </TooltipWrapper>
+            </div>
         </div>
 
         {#if currentUserRole === 1 && secretKey}
-            <p>
-                <strong>Key:</strong>
-                <span
-                    class="copyable"
-                    onclick={(e) => copyToClipboard(e, secretKey)}
-                >
-                    {secretKey}
-                </span>
-            </p>
+            <div class="room-info-block">
+                <h3>Room Key</h3>
+                <div class="info-line">
+                    <span
+                        class="copyable"
+                        onclick={(e) => copyToClipboard(e, secretKey)}
+                    >
+                        {secretKey}
+                    </span>
+                </div>
+            </div>
         {/if}
     </div>
     <div class="button-wrapper">
@@ -169,22 +173,38 @@
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 0.5rem;
+        padding: 0.3rem;
         color: #24292f;
         background-color: #fff;
-        gap: 1rem;
+        gap: 0.75rem;
     }
 
     .room-info {
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
+        gap: 0.75rem;
     }
 
-    .room-element-wrapper {
+    .room-info-block {
+        align-items: center;
         display: flex;
-        justify-content: space-between;
-        gap: 0.4rem;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .room-info-block h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #24292f;
+    }
+
+    .info-line {
+        display: flex;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 0.25rem;
+        gap: 0.5rem;
+        font-size: 0.8rem;
     }
 
     .copyable {
@@ -197,11 +217,6 @@
 
     .copyable:active {
         background-color: #b0b0b0;
-    }
-
-    p {
-        font-size: 0.8rem;
-        text-align: center;
     }
 
     .button-wrapper {

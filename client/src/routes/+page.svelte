@@ -77,7 +77,7 @@
         background-color: #1f011d;
         border-radius: 5px;
         font-size: 2rem;
-        padding: 0.75rem 1.5rem;
+        padding: 0.75rem 1.25rem;
         font-family: inherit;
         font-weight: bold;
         cursor: pointer;

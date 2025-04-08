@@ -36,8 +36,12 @@
 
     @media (max-width: 768px) {
         .room-sidebar {
-            gap: 0.2rem;
             flex-direction: row;
+            gap: 0.2rem;
+        }
+
+        :global(.room-sidebar > *) {
+            flex: 1 1 0;
         }
     }
 </style>

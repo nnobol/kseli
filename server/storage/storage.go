@@ -3,7 +3,7 @@ package storage
 import (
 	"sync"
 
-	"kseli-server/features/chat"
+	"kseli/features/chat"
 )
 
 var cleanupChan = make(chan string, 50)

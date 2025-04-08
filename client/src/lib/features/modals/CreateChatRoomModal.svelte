@@ -80,7 +80,7 @@
         try {
             const response = await createRoom(payload);
             tokenStore.set(response.token);
-            goto(`/room/${response.roomId}`);
+            await goto(`/room/${response.roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 

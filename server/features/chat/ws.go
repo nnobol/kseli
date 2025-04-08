@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"kseli-server/common"
+	"kseli/common"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"

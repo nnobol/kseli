@@ -1,4 +1,5 @@
 import { getItemFromLocalStorage, getItemFromSessionStorage, setItemInLocalStorage } from "./utils";
+import { API_KEY, useMocks } from "$lib/env";
 
 export interface RoomErrorResponse {
     statusCode?: number;
@@ -17,6 +18,11 @@ export interface CreateRoomOkResponse {
 }
 
 export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoomOkResponse> {
+    if (useMocks) {
+        const { createRoom: createRoomMock } = await import('./mocks/rooms');
+        return createRoomMock(payload);
+    }
+
     try {
         const sessionId = getUserSessionId();
 
@@ -24,7 +30,7 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoom
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': import.meta.env.VITE_API_KEY,
+                'X-API-Key': API_KEY,
                 'X-Participant-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
@@ -58,6 +64,11 @@ export interface JoinRoomOkResponse {
 }
 
 export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promise<JoinRoomOkResponse> {
+    if (useMocks) {
+        const { joinRoom: joinRoomMock } = await import('./mocks/rooms');
+        return joinRoomMock(payload);
+    }
+
     try {
         const sessionId = getUserSessionId();
 
@@ -65,7 +76,7 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': import.meta.env.VITE_API_KEY,
+                'X-API-Key': API_KEY,
                 'X-Participant-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
@@ -105,6 +116,11 @@ export interface GetRoomOkResponse {
 }
 
 export async function getRoom(roomId: string, token: string): Promise<GetRoomOkResponse> {
+    if (useMocks) {
+        const { getRoom: getRoomMock } = await import('./mocks/rooms');
+        return getRoomMock(roomId, token);
+    }
+
     try {
         const origin = window.location.origin;
 

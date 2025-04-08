@@ -1,41 +1,30 @@
 #!/bin/bash
 
+set -e
+
 # Set Env Variables
+export ENV="local"
 export SECRET_KEY="super-secure-secret-key"
 export API_KEY="super-secure-api-key"
 
-# Build Frontend
+echo "Building client..."
 cd client
-
-if [ -z "$API_KEY" ]; then
-    echo "Error: API_KEY environment variable is not set."
-    exit 1
-fi
-
 VITE_API_KEY=$API_KEY npm run build
+cd ..
 
-# Verify Build Success
-if [ $? -ne 0 ]; then
-    echo "Frontend build failed. Aborting deployment."
-    exit 1
-fi
-
-# Swap Directories Atomically
-cd ../builds
+cd builds
 if [ -d "client-new" ]; then
-    echo "Build complete. Swapping client directories."
+    echo "Build complete. Swapping old and new client builds..."
     mv client client-old || true
     mv client-new client
     rm -rf client-old
-    echo "Deployment successful."
+    echo "Swapped to new client build."
 else
     echo "Build directory client-new not found. Aborting."
     exit 1
 fi
-
-# Run Server
 cd ..
 
+echo "Starting Go server..."
 cd server
-
 go run main.go

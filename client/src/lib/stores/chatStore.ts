@@ -1,7 +1,8 @@
 import { writable } from "svelte/store";
-import { ChatWebSocketClient } from "$lib/api/ws";
+import type { IChatWebSocketClient } from "$lib/api/ws";
 import { goto } from "$app/navigation";
 import { errorStore } from "./errorStore";
+import { useMocks } from "$lib/env";
 
 interface Message {
     username: string;
@@ -14,15 +15,27 @@ interface Participant {
     role: number;
 }
 
-let chatConnection: ChatWebSocketClient | null = null;
+async function createChatWebSocketClient(token: string): Promise<IChatWebSocketClient> {
+    let ChatWS;
+    if (useMocks) {
+        const wsModule = await import('$lib/api/mocks/ws');
+        ChatWS = wsModule.ChatWebSocketClient;
+    } else {
+        const wsModule = await import('$lib/api/ws');
+        ChatWS = wsModule.ChatWebSocketClient;
+    }
+    return new ChatWS(token);
+}
+
+let chatConnection: IChatWebSocketClient | null = null;
 export const messages = writable<Message[]>([]);
 export const participants = writable<Participant[]>([]);
 
-export function initChatSession(initialParticipants: Participant[], token: string) {
+export async function initChatSession(initialParticipants: Participant[], token: string) {
     participants.set(initialParticipants);
 
     if (!chatConnection) {
-        chatConnection = new ChatWebSocketClient(token)
+        chatConnection = await createChatWebSocketClient(token);
         chatConnection.onMessage((message) => {
             switch (message.type) {
                 case "msg":

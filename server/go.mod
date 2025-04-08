@@ -1,6 +1,6 @@
-module kseli-server
+module kseli
 
-go 1.23.2
+go 1.24
 
 require github.com/gobwas/ws v1.4.0
 

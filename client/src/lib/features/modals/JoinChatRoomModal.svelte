@@ -96,7 +96,7 @@
         try {
             const response = await joinRoom(roomId, payload);
             tokenStore.set(response.token);
-            goto(`/room/${roomId}`);
+            await goto(`/room/${roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;
 

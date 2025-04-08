@@ -138,12 +138,17 @@
 <style>
     section {
         display: flex;
-        flex: 1;
         flex-direction: column;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 0.5rem;
+        padding: 0.3rem;
         background-color: #fff;
+    }
+
+    @media (min-width: 769px) {
+        section {
+            flex: 1;
+        }
     }
 
     h2 {
@@ -165,7 +170,7 @@
         color: #24292f;
         display: flex;
         justify-content: space-between;
-        gap: 1rem;
+        gap: 0.75rem;
         padding: 0.2rem;
     }
 
