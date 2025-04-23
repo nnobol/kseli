@@ -1,14 +1,7 @@
 <script lang="ts">
-    interface Message {
-        username: string;
-        content: string;
-    }
+    import { onMount } from "svelte";
+    import { messages } from "$lib/stores/chatStore";
 
-    interface Props {
-        messages: Message[];
-    }
-
-    let { messages }: Props = $props();
     let shouldAutoScroll = $state(true);
     let chatContainer: HTMLElement;
 
@@ -27,8 +20,24 @@
         shouldAutoScroll = isAtBottom();
     }
 
+    function handleResize() {
+        setTimeout(() => {
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }, 50);
+    }
+
+    onMount(() => {
+        window.visualViewport?.addEventListener("resize", handleResize);
+
+        return () => {
+            window.visualViewport?.removeEventListener("resize", handleResize);
+        };
+    });
+
     $effect(() => {
-        if (chatContainer && messages.length) {
+        if (chatContainer && $messages.length) {
             if (shouldAutoScroll) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
@@ -37,7 +46,7 @@
 </script>
 
 <div class="chat-window" bind:this={chatContainer} onscroll={handleScroll}>
-    {#each messages as message}
+    {#each $messages as message}
         <p><strong>{message.username}:</strong> {message.content}</p>
     {/each}
 </div>

@@ -17,7 +17,7 @@
 
 <fieldset {disabled} class:error={fieldError} class:active={hasSelection}>
     <legend class:error={fieldError} class:active={hasSelection}>
-        Maximum Number of Participants
+        Max Number of Participants
     </legend>
     <ul>
         {#each [2, 3, 4, 5] as option}
@@ -42,11 +42,9 @@
 
 <style>
     fieldset {
-        border: 2px solid #32012f;
+        border: 2px solid var(--color-modal-text);
         border-radius: 4px;
         padding: 0.5rem;
-        margin-bottom: 0.8rem;
-        text-align: center;
         transition: border-color 0.15s ease-in-out;
     }
 
@@ -60,16 +58,15 @@
     }
 
     fieldset.active {
-        border-color: #d26100;
+        border-color: var(--color-button-light);
     }
 
     legend {
         padding: 0 0.5rem;
-        font-size: 1rem;
-        color: #32012f;
-        border-right: 2px solid #32012f;
-        border-left: 2px solid #32012f;
-        line-height: 0.75rem;
+        color: var(--color-modal-text);
+        border-right: 2px solid var(--color-modal-text);
+        border-left: 2px solid var(--color-modal-text);
+        line-height: 0.6rem;
         transition:
             color 0.15s ease-in-out,
             border-color 0.15s ease-in-out;
@@ -81,17 +78,14 @@
     }
 
     legend.active {
-        color: #d26100;
-        border-color: #d26100;
+        color: var(--color-button-light);
+        border-color: var(--color-button-light);
     }
 
     ul {
         display: flex;
         gap: 1rem;
-        flex-wrap: wrap;
         list-style: none;
-        padding: 0;
-        margin: 0;
         justify-content: center;
     }
 
@@ -99,29 +93,29 @@
         display: flex;
         align-items: center;
         cursor: pointer;
-        font-size: 1rem;
-        color: #32012f;
-        position: relative;
+        color: var(--color-modal-text);
     }
 
     input {
         appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
         width: 1rem;
         height: 1rem;
-        border: 2px solid #32012f;
+        border: 2px solid var(--color-modal-text);
         border-radius: 50%;
         position: relative;
-        margin-right: 0.5rem;
+        margin-right: 0.25rem;
         transition: border-color 0.15s;
         cursor: pointer;
     }
 
     input:hover {
-        border-color: #d26100;
+        border-color: var(--color-button-light);
     }
 
     input:checked {
-        border-color: #d26100;
+        border-color: var(--color-button-light);
     }
 
     input:checked::after {
@@ -132,7 +126,7 @@
         transform: translate(-50%, -50%);
         width: 0.55rem;
         height: 0.55rem;
-        background-color: #d26100;
+        background-color: var(--color-button-light);
         border-radius: 50%;
     }
 
@@ -141,11 +135,11 @@
     }
 
     label:hover span {
-        color: #d26100;
+        color: var(--color-button-light);
     }
 
     input:checked + span {
-        color: #d26100;
+        color: var(--color-button-light);
     }
 
     /* Error states */

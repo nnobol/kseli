@@ -1,113 +1,205 @@
 <script lang="ts">
     import CreateChatRoomModal from "$lib/features/modals/CreateChatRoomModal.svelte";
-    import JoinChatRoomModal from "$lib/features/modals/JoinChatRoomModal.svelte";
-    import Footer from "$lib/components/Footer.svelte";
     import ErrorAlert from "$lib/components/error-alert/ErrorAlert.svelte";
 
     let { data } = $props();
 
     let errorMessage = $state(data.errorMessage);
-    let activeModal = $state<"create" | "join" | null>(null);
-
-    const modalComponents = {
-        create: CreateChatRoomModal,
-        join: JoinChatRoomModal,
-    };
-
-    function toggleModal(modal: "create" | "join" | null): void {
-        if (activeModal && modal !== null) return;
-        activeModal = modal;
-    }
+    let isModalOpen = $state(false);
 </script>
 
-<main>
-    <h1>
-        <span class="highlight">Kseli</span> - anonymous, temporary chat rooms.
-    </h1>
+<div class="home-page">
+    <main>
+        <div class="logo-and-text">
+            <svg
+                viewBox="50.98 43 449.02 353.08"
+                fill="currentColor"
+                class="logo"
+            >
+                <path
+                    d="M65.5 44c-.6.9 3.4 6.4 27.2 37.1 12.8 16.6 9.2 14.5 29.5 17 16.1 2 38.5-.9 53.8-7.1 10.2-4 19.5-9 24.9-13.3l5.4-4.2-.2-8c-.2-4.4-.6-11.2-1-15l-.6-7-69.2-.3c-45-.1-69.4.1-69.8.8m145.9 19.2c1.5 42.6 4.7 53.6 24.1 82.8 20.4 30.7 43.6 51.8 81 73.7 5.5 3.2 11.2 6.4 12.7 7.2 2.6 1.3 3.1 1 18-9.9 60-44.2 99.6-84 130.2-130.8 9-13.7 22.6-38.7 22.6-41.5 0-1.6-10.4-1.7-144.7-1.7H210.7zM51 122.4v78.3l9.4 3.2c5.2 1.7 9.9 3.1 10.5 3.1 3 0 16.7-18.3 23.5-31.4 8.2-15.8 12-31.1 13.2-52.6l.6-11.5-5.7-8C88.1 83.4 68.6 58.7 60.1 49.7c-9.9-10.5-9.1-17-9.1 72.7"
+                />
+                <path
+                    d="M198.5 86.1c-11.3 7.3-25 13-41.5 17-5.9 1.5-38 2-43.7.7-1.8-.4-3.3-.4-3.3 0s5 7 11 14.7c6.1 7.7 14.5 18.4 18.7 23.7l7.6 9.7 5.5.7c17 2.1 44-3.7 55.5-12 2.4-1.8 2.7-2.6 2.7-8 0-7.6-2.7-43-3.6-47.4-.4-1.7-1.2-3.2-1.8-3.1-.6 0-3.8 1.8-7.1 4M113 125.6c0 8-2.7 24.5-5.6 34.3-4.2 13.8-9.6 24-20.6 38.7-3.7 5-6.8 9.6-6.8 10.2 0 1.1 8.3 4.3 24 9.2 10.8 3.4 9.4 3.8 21.1-5.7 12-9.7 18.5-21.7 21.4-39.9l1.6-9.4-2.9-3.8c-1.6-2-6.9-9.1-11.7-15.7-9.9-13.4-18.2-23.5-19.6-23.5-.5 0-.9 2.5-.9 5.6m104.3 18.1c.4 8.7 1.1 20.7 1.7 26.8.5 6 1.6 19.5 2.4 30 2.2 26.6 2.1 26.3 6.5 27.5 2 .5 3.9 1 4.2 1 .4 0 8.4-8.1 17.9-18l17.2-18-9.6-10.1c-12.1-12.7-24.6-29.2-33.1-43.7-3.6-6.1-6.9-11.2-7.2-11.2s-.3 7.1 0 15.7m-13.3 5.6c-12.3 5.6-24.3 8.5-41.7 10.2-4 .4-7.3.9-7.3 1.2 0 .7 17.3 23 24.4 31.4l2.2 2.6 8.4-1.3c9.6-1.5 17.3-3.5 21.5-5.5l2.8-1.4-.2-13.5c-.2-13-1.6-25.6-3-26.4-.3-.2-3.5 1-7.1 2.7"
+                />
+                <path
+                    d="M151.1 179.7c-3.7 14.4-8.2 22.3-19.3 33.9l-9.8 10.1 18 5.3 18 5.2 5.9-5.1c18.3-15.8 17.4-27.5-3.7-51.9-2.9-3.4-5.7-6.2-6.1-6.2s-1.7 3.9-3 8.7m49.2 17.6c-6.8 1.8-12.3 3.6-12.3 4 0 .9 6.3 8.5 15.4 18.7 4.6 5.1 5.2 5.5 9.4 5.5l4.5.1-.6-13.1c-.6-12.4-1.7-18.6-3.4-18.4-.5.1-6.3 1.5-13 3.2m71.1.5c-2.9 1.9-17.4 18.7-17.4 20 0 6.9 8.6 28.9 12.8 32.6 2.6 2.3 13.5 5.3 22.3 6.2l6.6.6 14.6-12 14.5-12-2.1-1.9c-1.2-1.1-6.5-4.6-11.7-7.8-5.2-3.3-15.6-10.2-23-15.5-16.1-11.5-15.3-11-16.6-10.2M51.2 301.3l.3 94.2 40.2.3 40.1.2 2.1-2.9c1.2-1.6 2.1-3.1 2.1-3.4 0-.2 3.2-6.1 7-13.1 9-16.1 10.1-19.3 10.2-29.1 0-10-2-20-7.6-36.8-12.6-38.3-39.3-73.5-70.1-92.4-7.8-4.8-16.1-8.7-21.8-10.4l-2.7-.8zM181 216.2c-2 4.2-5.8 9.7-9.2 13.4l-5.8 6.2 2.7 1c8.3 3.1 20.7 6.2 25.1 6.2 3.2 0 4.5-.8 8.2-4.5 3.3-3.4 4.2-4.9 3.5-5.9-7.3-10-19-23.6-20.4-23.6-.3 0-2.2 3.3-4.1 7.2"
+                />
+                <path
+                    d="M91.5 222.5c23.8 21.1 41.3 43.2 51.4 65 6.3 13.6 12.8 35.6 15.6 52.7.3 2.1 1 3.8 1.5 3.8.6 0 1-.4 1-1 0-.5 2.2-4.7 4.9-9.4l4.9-8.6-2.8-9.7c-8.3-28.4-18.8-50.3-31.3-65.3-6.5-7.7-17.4-18.3-21.3-20.6-4.7-2.8-18.1-7.8-23.4-8.8l-3.5-.7zm149.7 7.7-6 7.2 2.4 4.8c2.6 5.1 2.7 5.1 12.9 6.7 3.3.5 6.8 1.2 7.8 1.6.9.4 1.7.3 1.7-.1 0-1.7-11.2-27.4-11.9-27.4-.5 0-3.5 3.2-6.9 7.2"
+                />
+                <path
+                    d="M130 233.4c0 .3 3 3.8 6.6 7.8 16.9 18.7 27.2 39 38.1 74.8.5 1.8 8.7-13.3 11-20.2 2.8-8.8-.4-23.1-8.4-37.7-7.1-12.9-12.5-16.4-32.3-21.5-13.5-3.4-15-3.7-15-3.2m85 4c0 4.1 1.8 9.6 3.8 11.6 1.3 1.3 1.4.8.8-4.8-.6-6.5-1.9-10.2-3.6-10.2-.6 0-1 1.5-1 3.4m104.3 8.9c-7.8 6.2-14.2 11.5-14.2 11.8-.2 1.2 2.6 1.8 20.1 3.8 18.8 2.3 46.9 4.1 48 3.2.4-.4-.8-1.9-2.6-3.3-3.8-3.1-36.6-26.8-36.9-26.8-.1 0-6.6 5.1-14.4 11.3m-113.2-4.4c-1.2 1.6-2.1 3.4-2.1 3.9 0 1.2 2.4 2.2 5.6 2.2 2 0 2.4-.5 2.4-2.9 0-6.6-2.5-8-5.9-3.2M176 246c0 .6 1.1 2.6 2.4 4.3 4.7 6.3 13.6 26.6 13.6 31.1 0 4.1 2.5 1.4 9.4-10.1 4.2-6.9 7.6-13.2 7.6-13.9 0-1.8-1.7-2.6-15.5-7.1-15.3-5.1-17.5-5.6-17.5-4.3m59.8 13-3.8 6.1 4.6 8c2.5 4.3 4.9 8.1 5.4 8.4.9.6 17-21.6 17-23.4 0-.6-1.2-1.3-2.7-1.7-1.6-.3-4.1-1-5.8-1.4-1.6-.5-4.8-1.1-7-1.5l-4-.5zm25.1 6.7c-7.2 10.1-14.9 22.6-14.9 24.2 0 1.7 9.1 19.9 10.6 21.1 1 .9 2.3-.9 6-8 5.6-11 13.8-22.6 22.8-32.6 3.6-4 6.3-7.5 5.9-7.7-.5-.2-3-.8-5.8-1.2-2.7-.4-7.5-1.3-10.5-2.1s-6.1-1.4-7-1.4-4.1 3.5-7.1 7.7m-48.4.8c-3.6 4.4-3.9 6.5-.8 6.5.8 0 5.5 1.3 10.5 3 9.8 3.3 10.8 3.5 10.8 2 0-1.6-8-9.9-12.6-13.1l-4.2-2.9zm78.9 6.4c-12.8 12.8-24.7 31.1-28.5 43.9l-1.2 4.2 8.8 17.5c4.9 9.6 9.1 17.5 9.5 17.5.3 0 1.7-2.6 3-5.8 13.3-32.7 31.6-54.8 61-73.7l7.5-4.9-3.5-.7c-1.9-.5-8.8-1.3-15.2-1.9-6.5-.5-16.6-1.7-22.5-2.5-5.8-.8-10.7-1.5-10.8-1.5s-3.7 3.6-8.1 7.9"
+                />
+                <path
+                    d="M359.5 274.9c-34.3 16.1-58.9 43.7-71.1 79.6l-3.7 10.9 1.8 5c1.8 5.2 7.4 18 9.8 22.6l1.3 2.5 95.7-.1c52.7-.1 96-.4 96.3-.7.7-.6-8.9-17.3-16-27.7-22.1-32.7-72.2-85.7-89.3-94.4-2.1-1-5.6-1.6-10-1.5-5.7 0-8.1.6-14.8 3.8m-158.6 8.4c-2 3.4-5.4 9.3-7.5 13.1l-3.7 6.9 3.8-.7c18.2-3.5 34.5-1.6 48.6 5.4 3.2 1.6 5.9 2.6 6.2 2.4.9-.9-7.4-14.9-11.1-18.7-2-2.1-5.6-5-7.8-6.3-4.3-2.6-20.6-8.4-23.3-8.4-.9 0-3.2 2.8-5.2 6.3"
+                />
+                <path
+                    d="M196 308.1c-9.8 2.6-11 3.5-15 11-1.8 3.5-5.5 10.2-8.2 14.8-2.6 4.6-4.6 8.6-4.4 8.9.3.2 3.3-.5 6.8-1.7 20.2-6.7 40.2-7.9 58.8-3.7 10.6 2.5 17.9 5.5 30.2 12.7 3.6 2.1 6.9 3.9 7.3 3.9.8 0-11.7-23.9-15.4-29.4-2-3.1-4.8-5.1-12.7-9.1-18.2-9.2-32.4-11.4-47.4-7.4"
+                />
+                <path
+                    d="M194 341.6c-16.4 2.9-26.6 7.8-33.9 16-3.6 4.1-20.1 34.7-20.1 37.3 0 1.5 148.6 1.6 149.5.1.4-.6-2.1-6.7-5.4-13.5-7.4-15.3-13.4-21.9-25.7-28.2-22.6-11.8-43-15.5-64.4-11.7"
+                />
+            </svg>
+            <div class="text-container">
+                <p class="text-main">
+                    KSELI - anonymous, temporary chat rooms.
+                </p>
+                <p class="text-additional">
+                    Create a room, invite others, chat anonymously, and leave
+                    when you're done. No account, no tracking, no data stored,
+                    simple as that.
+                </p>
+            </div>
+        </div>
 
-    <div class="btns">
-        <button class="join-btn" onclick={() => toggleModal("join")}>
-            Join Chat Room
+        <button
+            class="create-btn"
+            onclick={() => {
+                isModalOpen = true;
+            }}
+        >
+            CREATE A ROOM
         </button>
 
-        <button class="create-btn" onclick={() => toggleModal("create")}>
-            Create Chat Room
-        </button>
-    </div>
+        {#if isModalOpen}
+            <CreateChatRoomModal
+                closeModal={() => {
+                    isModalOpen = false;
+                }}
+            />
+        {/if}
+    </main>
 
-    {#if activeModal}
-        {@const Modal = modalComponents[activeModal]}
-        <Modal closeModal={() => toggleModal(null)} />
-    {/if}
-</main>
-
-<Footer isErrorPage={false} />
+    <footer>
+        <a
+            href="https://github.com/NikolozOboladze"
+            target="_blank"
+            rel="noopener"
+        >
+            CHECK ME OUT
+        </a>
+    </footer>
+</div>
 
 {#if errorMessage}
     <ErrorAlert {errorMessage} clearErrorMessage={() => (errorMessage = "")} />
 {/if}
 
 <style>
+    .home-page {
+        flex: 1 0;
+        display: flex;
+        flex-direction: column;
+        background-image: url("/main-blob.png");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+    }
+
+    @media (min-width: 1280px) {
+        .home-page {
+            background-size: 1280px, auto;
+        }
+    }
+
     main {
+        flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        padding: 2rem;
-        gap: 6rem;
+        padding: 1.5rem;
+        gap: 4rem;
     }
 
-    h1 {
-        text-align: center;
-        font-size: 3.5rem;
+    @media (min-width: 360px) {
+        main {
+            gap: 6rem;
+        }
     }
 
-    .highlight {
-        color: #d26100;
-        font-size: 4rem;
+    @media (min-width: 768px) {
+        main {
+            padding: 2.5rem;
+            gap: 8rem;
+        }
     }
 
-    .btns {
+    .logo-and-text {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        max-width: 1200px;
+        gap: 0.5rem;
     }
 
-    button {
-        background-color: #1f011d;
-        border-radius: 5px;
-        font-size: 2rem;
-        padding: 0.75rem 1.25rem;
-        font-family: inherit;
-        font-weight: bold;
-        cursor: pointer;
-        transition:
-            color 0.25s ease,
-            border-color 0.25s ease,
-            transform 0.25s ease;
+    .logo {
+        color: var(--color-light-primary);
+        width: 7rem;
+        height: auto;
     }
 
-    button:hover {
-        transform: scale(1.05);
+    .text-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .text-container {
+            gap: 3rem;
+        }
+    }
+
+    .text-main {
+        font-size: 2.5rem;
+        line-height: 90%;
+        font-weight: var(--font-weight-black);
+    }
+
+    .text-additional {
+        font-size: 1.5rem;
+        font-weight: var(--font-weight-bold);
     }
 
     .create-btn {
-        color: #bcb594;
-        border: 2px solid #d26100;
+        background-color: var(--color-button-light);
+        color: inherit;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.5rem;
+        padding: 1.25rem 2.25rem;
+        font-family: inherit;
+        font-weight: var(--font-weight-bold);
+        cursor: pointer;
+        transition: transform 0.25s ease;
     }
 
     .create-btn:hover {
-        border-color: #ab4f00;
-        color: #ada47c;
+        transform: scale(1.05);
     }
 
-    .join-btn {
-        color: #d26100;
-        border: 2px solid #3a1f3b;
+    footer {
+        padding: 0.75rem 1rem;
+        text-align: right;
+        user-select: none;
     }
 
-    .join-btn:hover {
-        border-color: #2d182e;
-        color: #ab4f00;
+    @media (min-width: 360px) {
+        footer {
+            padding: 1rem 1.25rem;
+        }
+    }
+
+    footer a {
+        all: unset;
+        cursor: pointer;
+        font-size: 1.2rem;
+        font-weight: var(--font-weight-bold);
+        transition: color 0.25s ease;
+    }
+
+    footer a:hover {
+        color: var(--color-button-light);
     }
 </style>

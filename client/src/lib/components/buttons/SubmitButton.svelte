@@ -18,19 +18,21 @@
 
 <style>
     .submit-button {
-        background-color: #d26100;
-        color: #bcb594;
+        background-color: var(--color-modal-text);
+        color: var(--color-text);
         border: none;
-        border-radius: 5px;
+        border-radius: 50px;
         cursor: pointer;
         font-size: 1rem;
-        padding: 0.5rem 1rem;
+        padding: 0.8rem 1.5rem;
         font-family: inherit;
-        font-weight: bold;
+        font-weight: var(--font-weight-bold);
         transition: opacity 0.2s ease;
-        margin-top: 1.5rem;
+
+        /* for the spinner */
+        min-width: 6.75rem;
+        min-height: 2.75rem;
         justify-content: center;
-        min-width: 6rem;
         display: inline-flex;
     }
 
@@ -45,7 +47,7 @@
 
     .spinner {
         border: 2px solid rgba(255, 255, 255, 0.3);
-        border-top: 2px solid #ffffff;
+        border-top: 2px solid var(--color-text);
         border-radius: 50%;
         width: 1rem;
         height: 1rem;

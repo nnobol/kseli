@@ -23,7 +23,7 @@
 
 <style>
     footer {
-        background-color: #1f011d;
+        background-color: var(--colog-bg);
         color: #cbc6ac;
         border-top: 2px solid #3a1f3b;
         padding: 0.5rem;

@@ -37,38 +37,38 @@ func main() {
 	))
 
 	// POST request for a participant to join a chat room
-	mux.Handle("POST /api/rooms/{roomID}/join", middleware.WithMiddleware(
+	mux.Handle("POST /api/rooms/join", middleware.WithMiddleware(
 		chat.JoinRoomHandler(storage),
+		middleware.ValidateInviteToken(),
 		middleware.ValidateParticipantSessionID(),
-		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
 	))
 
 	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
 		chat.GetRoomHandler(storage),
-		middleware.ValidateToken(),
+		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// DELETE request to close the chat room
 	mux.Handle("DELETE /api/rooms/{roomID}", middleware.WithMiddleware(
 		chat.DeleteRoomHandler(storage),
-		middleware.ValidateToken(),
+		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// POST request to kick a participant from a chat room
 	mux.Handle("POST /api/rooms/{roomID}/kick", middleware.WithMiddleware(
 		chat.KickParticipantHandler(storage),
-		middleware.ValidateToken(),
+		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// POST request to ban a user from a chat room
 	mux.Handle("POST /api/rooms/{roomID}/ban", middleware.WithMiddleware(
 		chat.BanParticipantHandler(storage),
-		middleware.ValidateToken(),
+		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 

@@ -41,7 +41,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions  - -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex  - -->
 <div
-  class="modal"
+  class="modal-backdrop"
   bind:this={modal}
   onkeydown={handleKeyDown}
   onclick={handleBackdropClick}
@@ -54,7 +54,7 @@
 </div>
 
 <style>
-  .modal {
+  .modal-backdrop {
     all: unset;
     position: fixed;
     top: 0;

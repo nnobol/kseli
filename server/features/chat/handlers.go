@@ -14,52 +14,6 @@ import (
 	"github.com/gobwas/ws/wsutil"
 )
 
-func validateUsername(username string, fieldErrors map[string]string) {
-	if username == "" {
-		fieldErrors["username"] = "Username cannot be empty."
-		return
-	}
-
-	if strings.Contains(username, " ") {
-		fieldErrors["username"] = "Username cannot contain spaces."
-		return
-	}
-
-	if len(username) < 3 || len(username) > 15 {
-		fieldErrors["username"] = "Username must be between 3 and 15 characters."
-	}
-}
-
-func validateMaxParticipants(maxParticipants uint8, fieldErrors map[string]string) {
-	if maxParticipants < 2 || maxParticipants > 5 {
-		fieldErrors["maxParticipants"] = "Max participants must be between 2 and 5."
-	}
-}
-
-func validateRoomId(roomID string, fieldErrors map[string]string) {
-	if roomID == "" {
-		fieldErrors["roomId"] = "Chat Room Id is required."
-		return
-	}
-
-	if strings.Contains(roomID, " ") {
-		fieldErrors["roomId"] = "Chat Room Id cannot contain spaces."
-		return
-	}
-}
-
-func validateSecretKey(secretKey string, fieldErrors map[string]string) {
-	if secretKey == "" {
-		fieldErrors["roomSecretKey"] = "Chat Room Secret Key is required."
-		return
-	}
-
-	if strings.Contains(secretKey, " ") {
-		fieldErrors["roomSecretKey"] = "Chat Room Secret Key cannot contain spaces."
-		return
-	}
-}
-
 type CreateRoomRequest struct {
 	Username        string `json:"username"`
 	MaxParticipants uint8  `json:"maxParticipants"`
@@ -79,19 +33,52 @@ func CreateRoomHandler(s Storage) http.HandlerFunc {
 			return
 		}
 
-		sessionID, ok := r.Context().Value(auth.ParticipantSessionIDKey).(string)
-		if !ok {
-			common.WriteError(w, http.StatusUnauthorized, "Session ID missing.")
-			return
-		}
-
 		fieldErrors := make(map[string]string, 2) // field name -> error message
 
 		validateUsername(req.Username, fieldErrors)
-		validateMaxParticipants(req.MaxParticipants, fieldErrors)
+		if req.MaxParticipants < 2 || req.MaxParticipants > 5 {
+			fieldErrors["maxParticipants"] = "Max participants must be between 2 and 5."
+		}
 
 		if len(fieldErrors) > 0 {
 			common.WriteFieldErrors(w, http.StatusBadRequest, fieldErrors)
+			return
+		}
+
+		roomID := generateUniqueRoomID(s)
+		roomSecretKey := generateRandomString(10)
+		roomExpiration := time.Now().Add(30 * time.Minute).Unix()
+
+		inviteClaims := auth.InviteClaims{
+			RoomID:    roomID,
+			SecretKey: roomSecretKey,
+			Exp:       roomExpiration,
+		}
+
+		inviteToken, err := auth.CreateToken(inviteClaims)
+		if err != nil {
+			common.WriteError(w, http.StatusInternalServerError, "Failed to create invite token: "+err.Error())
+			return
+		}
+		origin := r.Header.Get("Origin")
+		inviteLink := fmt.Sprintf("%s/join?invite=%s", origin, inviteToken)
+
+		room := &Room{
+			nextParticipantID:  2,
+			maxParticipants:    req.MaxParticipants,
+			roomID:             roomID,
+			secretKey:          roomSecretKey,
+			inviteLink:         inviteLink,
+			participants:       make(map[string]*Participant, req.MaxParticipants),
+			bannedParticipants: make(map[string]struct{}),
+			onClose:            func(roomID string) { s.DeleteRoom(roomID) },
+			onExpire:           time.AfterFunc(30*time.Minute, func() { s.RoomCleanupFunc()(roomID) }),
+			expiresAt:          roomExpiration,
+		}
+
+		sessionID, ok := r.Context().Value(auth.ParticipantSessionIDKey).(string)
+		if !ok {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid Session ID.")
 			return
 		}
 
@@ -100,21 +87,6 @@ func CreateRoomHandler(s Storage) http.HandlerFunc {
 			id:        1,
 			username:  req.Username,
 			role:      common.Admin,
-		}
-
-		roomID := generateUniqueRoomID(s)
-		roomSecretKey := generateSecretKey()
-
-		room := &Room{
-			nextParticipantID:  2,
-			roomID:             roomID,
-			maxParticipants:    req.MaxParticipants,
-			secretKey:          roomSecretKey,
-			participants:       make(map[string]*Participant, req.MaxParticipants),
-			bannedParticipants: make(map[string]struct{}),
-			onClose:            func(roomID string) { s.DeleteRoom(roomID) },
-			onExpire:           time.AfterFunc(30*time.Minute, func() { s.RoomCleanupFunc()(roomID) }),
-			expiresAt:          time.Now().UTC().Add(30 * time.Minute).Unix(),
 		}
 
 		// no need to lock here since room is not in storage yet
@@ -127,7 +99,7 @@ func CreateRoomHandler(s Storage) http.HandlerFunc {
 			Username: admin.username,
 			Role:     admin.role,
 			RoomID:   roomID,
-			Exp:      time.Now().Add(time.Hour).Unix(),
+			Exp:      roomExpiration,
 		}
 
 		token, err := auth.CreateToken(claims)
@@ -150,81 +122,72 @@ func CreateRoomHandler(s Storage) http.HandlerFunc {
 }
 
 type JoinRoomRequest struct {
-	Username      string `json:"username"`
-	RoomSecretKey string `json:"roomSecretKey"`
+	Username string `json:"username"`
 }
 
 type JoinRoomResponse struct {
-	Token string `json:"token"`
+	RoomID string `json:"roomId"`
+	Token  string `json:"token"`
 }
 
 func JoinRoomHandler(s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req JoinRoomRequest
 
-		roomID := r.PathValue("roomID")
-
-		fieldErrors := make(map[string]string, 3) // field name -> error message
-
-		validateRoomId(roomID, fieldErrors)
-
-		if len(fieldErrors) > 0 {
-			common.WriteFieldErrors(w, http.StatusBadRequest, fieldErrors)
-			return
-		}
-
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			common.WriteError(w, http.StatusBadRequest, "Invalid JSON request body.")
 			return
 		}
 
-		sessionID, ok := r.Context().Value(auth.ParticipantSessionIDKey).(string)
-		if !ok {
-			common.WriteError(w, http.StatusUnauthorized, "Session ID missing.")
-			return
-		}
+		fieldErrors := make(map[string]string, 1) // field name -> error message
 
 		validateUsername(req.Username, fieldErrors)
-		validateSecretKey(req.RoomSecretKey, fieldErrors)
 
 		if len(fieldErrors) > 0 {
 			common.WriteFieldErrors(w, http.StatusBadRequest, fieldErrors)
 			return
 		}
 
-		room, exists := s.GetRoom(roomID)
+		sessionID, ok := r.Context().Value(auth.ParticipantSessionIDKey).(string)
+		if !ok {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid Session ID.")
+			return
+		}
+
+		inviteClaims, ok := r.Context().Value(auth.InviteClaimsKey).(*auth.InviteClaims)
+		if !ok {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid invite token.")
+			return
+		}
+
+		room, exists := s.GetRoom(inviteClaims.RoomID)
 		if !exists {
-			fieldErrors["roomId"] = "Chat Room not found."
-			common.WriteFieldErrors(w, http.StatusNotFound, fieldErrors)
+			common.WriteError(w, http.StatusNotFound, "Chat Room not found.")
 			return
 		}
 
 		room.mu.RLock()
-		if req.RoomSecretKey != room.secretKey {
+		if inviteClaims.SecretKey != room.secretKey {
 			room.mu.RUnlock()
-			fieldErrors["roomSecretKey"] = "Incorrect Secret Key."
-			common.WriteFieldErrors(w, http.StatusForbidden, fieldErrors)
+			common.WriteError(w, http.StatusForbidden, "Invalid invite link.")
 			return
 		}
 
 		if _, alreadyInRoom := room.participants[sessionID]; alreadyInRoom {
 			room.mu.RUnlock()
-			fieldErrors["roomId"] = "You can not join a room you are already in."
-			common.WriteFieldErrors(w, http.StatusBadRequest, fieldErrors)
+			common.WriteError(w, http.StatusBadRequest, "You can not join a room you are already in.")
 			return
 		}
 
 		if _, banned := room.bannedParticipants[sessionID]; banned {
 			room.mu.RUnlock()
-			fieldErrors["roomId"] = "You are banned from this room."
-			common.WriteFieldErrors(w, http.StatusForbidden, fieldErrors)
+			common.WriteError(w, http.StatusForbidden, "You are banned from this room.")
 			return
 		}
 
 		if uint8(len(room.participants)) == room.maxParticipants {
 			room.mu.RUnlock()
-			fieldErrors["roomId"] = "Chat Room is full."
-			common.WriteFieldErrors(w, http.StatusConflict, fieldErrors)
+			common.WriteError(w, http.StatusConflict, "Chat Room is full.")
 			return
 		}
 
@@ -248,17 +211,14 @@ func JoinRoomHandler(s Storage) http.HandlerFunc {
 		}
 
 		room.join(p)
-
-		roomIDCopy := room.roomID
-
 		room.mu.Unlock()
 
 		claims := auth.Claims{
 			UserID:   p.id,
 			Username: p.username,
 			Role:     p.role,
-			RoomID:   roomIDCopy,
-			Exp:      time.Now().Add(time.Hour).Unix(),
+			RoomID:   inviteClaims.RoomID,
+			Exp:      time.Now().Add(30 * time.Minute).Unix(),
 		}
 
 		token, err := auth.CreateToken(claims)
@@ -275,7 +235,8 @@ func JoinRoomHandler(s Storage) http.HandlerFunc {
 		}
 
 		common.WriteJSON(w, http.StatusCreated, &JoinRoomResponse{
-			Token: token,
+			RoomID: inviteClaims.RoomID,
+			Token:  token,
 		})
 	}
 }
@@ -285,8 +246,7 @@ type GetRoomResponse struct {
 	MaxParticipants uint8             `json:"maxParticipants"`
 	Participants    []ParticipantView `json:"participants"`
 	ExpiresAt       int64             `json:"expiresAt"`
-	RoomID          string            `json:"roomId"`
-	SecretKey       string            `json:"secretKey,omitempty"`
+	InviteLink      string            `json:"inviteLink,omitempty"`
 }
 
 func GetRoomHandler(s Storage) http.HandlerFunc {
@@ -294,25 +254,20 @@ func GetRoomHandler(s Storage) http.HandlerFunc {
 
 		roomID := r.PathValue("roomID")
 
-		if roomID == "" {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id is required.")
-			return
-		}
-
-		if strings.Contains(roomID, " ") {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id cannot contain spaces.")
-			return
-		}
-
-		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
-		if !ok || claims == nil {
-			common.WriteError(w, http.StatusUnauthorized, "Unauthorized.")
+		if err := validateRoomId(roomID); err != "" {
+			common.WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		room, exists := s.GetRoom(roomID)
 		if !exists {
 			common.WriteError(w, http.StatusNotFound, "Chat Room not found.")
+			return
+		}
+
+		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
+		if !ok || claims == nil {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid authorizaton token.")
 			return
 		}
 
@@ -323,9 +278,9 @@ func GetRoomHandler(s Storage) http.HandlerFunc {
 			return
 		}
 
-		secretKey := ""
+		inviteLink := ""
 		if claims.Role == common.Admin {
-			secretKey = room.secretKey
+			inviteLink = room.inviteLink
 		}
 
 		participants := room.getParticipantsAsSlice()
@@ -335,8 +290,7 @@ func GetRoomHandler(s Storage) http.HandlerFunc {
 			MaxParticipants: room.maxParticipants,
 			Participants:    participants,
 			ExpiresAt:       room.expiresAt,
-			RoomID:          room.roomID,
-			SecretKey:       secretKey,
+			InviteLink:      inviteLink,
 		}
 		room.mu.RUnlock()
 
@@ -349,25 +303,20 @@ func DeleteRoomHandler(s Storage) http.HandlerFunc {
 
 		roomID := r.PathValue("roomID")
 
-		if roomID == "" {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id is required.")
-			return
-		}
-
-		if strings.Contains(roomID, " ") {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id cannot contain spaces.")
-			return
-		}
-
-		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
-		if !ok || claims == nil {
-			common.WriteError(w, http.StatusUnauthorized, "Unauthorized.")
+		if err := validateRoomId(roomID); err != "" {
+			common.WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		room, exists := s.GetRoom(roomID)
 		if !exists {
 			common.WriteError(w, http.StatusNotFound, "Chat Room not found.")
+			return
+		}
+
+		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
+		if !ok || claims == nil {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid authorizaton token.")
 			return
 		}
 
@@ -400,13 +349,8 @@ func performRoomAction(s Storage, action string, actionFunc func(r *Room, target
 
 		roomID := r.PathValue("roomID")
 
-		if roomID == "" {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id is required.")
-			return
-		}
-
-		if strings.Contains(roomID, " ") {
-			common.WriteError(w, http.StatusBadRequest, "Chat Room Id cannot contain spaces.")
+		if err := validateRoomId(roomID); err != "" {
+			common.WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
@@ -415,15 +359,15 @@ func performRoomAction(s Storage, action string, actionFunc func(r *Room, target
 			return
 		}
 
-		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
-		if !ok || claims == nil {
-			common.WriteError(w, http.StatusUnauthorized, "Unauthorized.")
-			return
-		}
-
 		room, exists := s.GetRoom(roomID)
 		if !exists {
 			common.WriteError(w, http.StatusNotFound, "Chat Room not found.")
+			return
+		}
+
+		claims, ok := r.Context().Value(auth.ParticipantClaimsKey).(*auth.Claims)
+		if !ok || claims == nil {
+			common.WriteError(w, http.StatusInternalServerError, "Invalid authorizaton token.")
 			return
 		}
 
@@ -482,7 +426,7 @@ func RoomWSHandler(s Storage) http.HandlerFunc {
 			return
 		}
 
-		claims, err := auth.ValidateToken(token)
+		claims, err := auth.ValidateToken[auth.Claims](token)
 		if err != nil {
 			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "token-invalid"))
 			conn.Close()
@@ -498,4 +442,32 @@ func RoomWSHandler(s Storage) http.HandlerFunc {
 
 		room.addWSConn(conn, claims.Username)
 	}
+}
+
+func validateUsername(username string, fieldErrors map[string]string) {
+	if username == "" {
+		fieldErrors["username"] = "Username cannot be empty."
+		return
+	}
+
+	if strings.Contains(username, " ") {
+		fieldErrors["username"] = "Username cannot contain spaces."
+		return
+	}
+
+	if len(username) < 3 || len(username) > 15 {
+		fieldErrors["username"] = "Username must be between 3 and 15 characters."
+	}
+}
+
+func validateRoomId(roomID string) string {
+	if roomID == "" {
+		return "Chat Room Id is required."
+	}
+
+	if strings.Contains(roomID, " ") {
+		return "Chat Room Id cannot contain spaces."
+	}
+
+	return ""
 }

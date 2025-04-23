@@ -1,42 +1,21 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import ModalWrapper from "./ModalWrapper.svelte";
-    import ModalFormLayout from "./ModalFormLayout.svelte";
-    import FloatingInputField from "../../components/fields/FloatingInputField.svelte";
-    import RadioFieldMaxParticipants from "../../components/fields/RadioFieldMaxParticipants.svelte";
-    import ErrorAlert from "../../components/error-alert/ErrorAlert.svelte";
-    import { createRoom } from "$lib/api/rooms";
+    import { page } from "$app/state";
+    import ModalFormLayout from "$lib/features/modals/ModalFormLayout.svelte";
+    import FloatingInputField from "$lib/components/fields/FloatingInputField.svelte";
+    import ErrorAlert from "$lib/components/error-alert/ErrorAlert.svelte";
+    import type { JoinRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
+    import { joinRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
-    import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
-
-    interface Props {
-        closeModal: () => void;
-    }
-
-    let { closeModal }: Props = $props();
 
     let username: string = $state("");
-    let maxParticipants: number = $state(0);
-
     let errorMessage: string = $state("");
     let fieldErrors: Record<string, string> = $state({});
     let hasSubmitted: boolean = $state(false);
-
     let loading: boolean = $state(false);
     let buttonDisabled: boolean = $derived(
         Object.keys(fieldErrors).length > 0 || loading,
     );
-
-    function clearErrorMessage(): void {
-        errorMessage = "";
-    }
-
-    function validateAllFields(): void {
-        if (!hasSubmitted) return;
-
-        validateUsername();
-        validateMaxParticipants();
-    }
 
     function validateUsername(): void {
         if (!hasSubmitted) return;
@@ -52,33 +31,31 @@
         }
     }
 
-    function validateMaxParticipants(): void {
-        if (!hasSubmitted) return;
-
-        if (!maxParticipants) {
-            fieldErrors.maxParticipants = "Select one of the values.";
-        } else {
-            delete fieldErrors.maxParticipants;
-        }
-    }
-
     async function handleSubmit(event: Event) {
         event.preventDefault();
 
         hasSubmitted = true;
 
-        validateAllFields();
+        validateUsername();
 
         if (Object.keys(fieldErrors).length > 0) {
             return;
         }
 
+        const token = page.url.searchParams.get("invite");
+
+        if (!token) {
+            errorMessage =
+                "Missing invite token. Please use a valid invite URL.";
+            return;
+        }
+
         loading = true;
 
-        const payload: CreateRoomPayload = { username, maxParticipants };
+        const payload: JoinRoomPayload = { username };
 
         try {
-            const response = await createRoom(payload);
+            const response = await joinRoom(token, payload);
             tokenStore.set(response.token);
             await goto(`/room/${response.roomId}`);
         } catch (err: any) {
@@ -102,31 +79,49 @@
         fieldError={fieldErrors.username}
         onInput={() => validateUsername()}
     />
-
-    <RadioFieldMaxParticipants
-        disabled={loading}
-        fieldError={fieldErrors.maxParticipants}
-        onChange={(value) => {
-            maxParticipants = value;
-            validateMaxParticipants();
-        }}
-    />
 {/snippet}
 
-{#snippet modalContent({ closeModal }: { closeModal: () => void })}
+<main>
     <ModalFormLayout
-        headerTitle="CREATE A ROOM"
-        buttonText="CREATE"
+        headerTitle="JOIN A ROOM"
+        buttonText="JOIN"
         {loading}
         {buttonDisabled}
-        {closeModal}
+        closeModal={null}
         {fields}
         onSubmit={handleSubmit}
     />
-{/snippet}
-
-<ModalWrapper {loading} {closeModal} content={modalContent} />
+</main>
 
 {#if errorMessage}
-    <ErrorAlert {errorMessage} {clearErrorMessage} />
+    <ErrorAlert {errorMessage} clearErrorMessage={() => (errorMessage = "")} />
 {/if}
+
+<style>
+    main {
+        display: flex;
+        flex: 1 0;
+        align-items: center;
+        justify-content: center;
+        z-index: 0;
+    }
+
+    main::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("/join-blob.png");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        opacity: 0.5;
+        z-index: -1;
+        pointer-events: none;
+    }
+
+    @media (min-width: 1280px) {
+        main::before {
+            background-size: 1280px, auto;
+        }
+    }
+</style>

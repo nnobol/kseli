@@ -1,7 +1,6 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
-    import Footer from "$lib/components/Footer.svelte";
     import { onMount } from "svelte";
     import { getItemFromSessionStorage } from "$lib/api/utils";
 
@@ -31,11 +30,10 @@
     <button onclick={() => goto("/")}>Go Home</button>
 </main>
 
-<Footer isErrorPage={true} />
-
 <style>
     main {
         display: flex;
+        flex: 1;
         background-color: #ffe4e4;
         color: #d8000c;
         flex-direction: column;
@@ -49,15 +47,18 @@
     .err-text {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 2rem;
     }
 
     h1 {
         font-size: 3.5rem;
+        font-weight: var(--font-weight-black);
+        text-transform: uppercase;
     }
 
     p {
         font-size: 2rem;
+        font-weight: var(--font-weight-bold);
     }
 
     button {
@@ -69,7 +70,7 @@
         font-size: 1.5rem;
         cursor: pointer;
         font-family: inherit;
-        font-weight: bold;
+        font-weight: var(--font-weight-bold);
         transition: opacity 0.25s ease;
     }
 

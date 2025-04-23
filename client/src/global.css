@@ -1,37 +1,106 @@
+@font-face {
+    font-family: 'Maven Pro';
+    src: url('/fonts/MavenPro-Regular.woff2') format('woff2');
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: 'Maven Pro';
+    src: url('/fonts/MavenPro-Bold.woff2') format('woff2');
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: 'Maven Pro';
+    src: url('/fonts/MavenPro-Black.woff2') format('woff2');
+    font-weight: 900;
+}
+
+:root {
+    /* Fonts */
+    --font-base: 'Maven Pro', sans-serif;
+    --font-weight-regular: 400;
+    --font-weight-bold: 700;
+    --font-weight-black: 900;
+
+    /* Colors */
+    --color-bg: #1B0332;
+    --color-text: #EBE9E9;
+    --color-light-primary: #C6C0CC;
+    --color-button-light: #C76A59;
+    --color-modal-text: #4D235A;
+}
+
 *,
 *::before,
 *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
-html,
+html {
+    background-color: var(--color-light-primary);
+    font-size: 12px;
+    font-family: var(--font-base);
+    color: var(--color-text);
+    height: 100%;
+    overflow-x: hidden;
+}
+
 body {
     height: 100%;
-    width: 100%;
-    font-size: 20px;
-    font-family: serif;
-    background-color: #1f011d;
-    color: #cbc6ac;
+    background-color: var(--color-bg);
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
-main {
-    flex: 1;
+button {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 
-/* Tablet */
-@media (max-width: 768px) {
+/* 
+Breakpoints for reference (max-width):
+mobile - small: 320px;
+mobile - medium: 360px;
+mobile - large: 400px;
+tablet - small: 768px;
+tablet - large: 1024px;
+desktop - small: 1280px;
+desktop - medium: 1440px;
+desktop - large: 1920px;
+*/
+
+@media (min-width: 360px) {
     html {
-        font-size: 17.5px;
+        font-size: 14px;
     }
 }
 
-/* Mobile */
-@media (max-width: 480px) {
+@media (min-width: 400px) {
     html {
-        font-size: 15px;
+        font-size: 16px;
+    }
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 18px;
+    }
+}
+
+@media (min-width: 1024px) {
+    html {
+        font-size: 20px;
+    }
+}
+
+@media (min-width: 1440px) {
+    html {
+        font-size: 22px;
     }
 }

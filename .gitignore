@@ -1,5 +1,6 @@
 # Builds
 builds
+build-and-deploy-prod.sh
 
 # Node.js / Svelte Client
 client/node_modules

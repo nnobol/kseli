@@ -85,7 +85,15 @@ func ValidateParticipantSessionID() func(http.Handler) http.Handler {
 	}
 }
 
-func ValidateToken() func(http.Handler) http.Handler {
+func ValidateParticipantToken() func(http.Handler) http.Handler {
+	return validateToken[auth.Claims](auth.ParticipantClaimsKey)
+}
+
+func ValidateInviteToken() func(http.Handler) http.Handler {
+	return validateToken[auth.InviteClaims](auth.InviteClaimsKey)
+}
+
+func validateToken[T auth.TokenClaims](contextKey auth.ContextKey) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := r.Header.Get("Authorization")
@@ -94,13 +102,13 @@ func ValidateToken() func(http.Handler) http.Handler {
 				return
 			}
 
-			claims, err := auth.ValidateToken(token)
+			claims, err := auth.ValidateToken[T](token)
 			if err != nil {
 				common.WriteError(w, http.StatusUnauthorized, "Invalid or expired token.")
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), auth.ParticipantClaimsKey, &claims)
+			ctx := context.WithValue(r.Context(), contextKey, &claims)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

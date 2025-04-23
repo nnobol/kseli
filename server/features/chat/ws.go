@@ -120,8 +120,8 @@ func (r *Room) handleWrite(conn net.Conn, username string, msgQueue <-chan []byt
 		}
 	}()
 
-	pingInterval := 15 * time.Second
-	timeoutDuration := 20 * time.Second
+	pingInterval := 10 * time.Second
+	timeoutDuration := 30 * time.Second
 
 	pingTicker := time.NewTicker(pingInterval)
 	defer pingTicker.Stop()
@@ -150,10 +150,7 @@ func (r *Room) handleWrite(conn net.Conn, username string, msgQueue <-chan []byt
 				return
 			}
 
-			if err := wsutil.WriteServerMessage(conn, ws.OpBinary, []byte{0}); err != nil {
-				cleanup = true
-				return
-			}
+			wsutil.WriteServerMessage(conn, ws.OpBinary, []byte{0})
 			hasSentFirstPing = true
 		}
 	}

@@ -13,7 +13,8 @@ export async function joinRoom(payload: JoinRoomPayload): Promise<JoinRoomOkResp
     await new Promise(resolve => setTimeout(resolve, 500));
 
     return {
-        token: 'token'
+        roomId: '123',
+        token: 'token',
     } as JoinRoomOkResponse;
 }
 
@@ -22,13 +23,17 @@ export async function getRoom(roomId: string, token: string): Promise<GetRoomOkR
 
     return {
         userRole: 1,
-        maxParticipants: 3,
+        maxParticipants: 5,
         participants: [
             { id: 1, username: "Nika", role: 1 },
-            { id: 2, username: "Lado", role: 2 }
+            { id: 2, username: "Sigma", role: 2 },
+            { id: 2, username: "Vano", role: 2 },
+            { id: 2, username: "Otara", role: 2 },
+            { id: 2, username: "Mako", role: 2 }
+            
         ],
         expiresAt: Math.floor(Date.now() / 1000) + 1800,
         roomId: roomId,
-        secretKey: "Awf5NzKL6Y6Wug"
+        inviteLink: "http://localhost:5173/join?invite=123&sdfgeruiferuifhreipufhweriufrupfhwerufrweiupfhwerfheruipfhergfherpgf"
     } as GetRoomOkResponse
 }

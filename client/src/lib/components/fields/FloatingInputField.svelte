@@ -21,28 +21,25 @@
 </script>
 
 <fieldset {disabled}>
-    <div>
+    <div class="input-wrapper">
         <input
             bind:value
             {id}
             {type}
-            placeholder=""
+            placeholder=" "
             oninput={onInput}
             class:error={fieldError}
         />
         <label for={id} class:error={fieldError}>{labelText}</label>
     </div>
     {#if fieldError}
-        <span>{fieldError}</span>
+        <span class="field-error">{fieldError}</span>
     {/if}
 </fieldset>
 
 <style>
     fieldset {
         border: none;
-        padding: 0;
-        margin-bottom: 0.8rem;
-        position: relative;
     }
 
     fieldset:disabled {
@@ -50,21 +47,19 @@
         pointer-events: none;
     }
 
-    div {
+    .input-wrapper {
         position: relative;
-        display: flex;
-        flex-direction: column;
     }
 
     input {
         width: 100%;
         padding: 0.5rem 0.5rem;
         font-size: 1rem;
-        border: 2px solid #32012f;
+        border: 2px solid var(--color-modal-text);
         border-radius: 4px;
         outline: none;
         background: transparent;
-        color: #32012f;
+        color: var(--color-modal-text);
         font-family: inherit;
         transition: border-color 0.15s ease-in-out;
     }
@@ -78,8 +73,8 @@
 
         pointer-events: none;
         font-size: 1rem;
-        color: #32012f;
-        background: #cbc6ac;
+        color: var(--color-modal-text);
+        background: var(--color-light-primary);
         padding: 0 0.2rem;
         transition:
             top 0.15s ease-in-out,
@@ -88,7 +83,7 @@
             color 0.15s ease-in-out;
     }
 
-    span {
+    .field-error {
         font-size: 0.875rem;
         color: red;
         display: block;
@@ -98,7 +93,7 @@
     /* Change input border color when focused or has content (not in error state) */
     input:focus:not(.error),
     input:not(:placeholder-shown):not(.error) {
-        border-color: #d26100;
+        border-color: var(--color-button-light);
     }
 
     /* Transform label when input is focused or has content (not in error state) */
@@ -107,9 +102,9 @@
         top: 0;
         left: 0.4rem;
         font-size: 0.75rem;
-        color: #d26100;
-        border-right: 1px solid #cbc6ac;
-        border-left: 1px solid #cbc6ac;
+        color: var(--color-button-light);
+        border-right: 1px solid var(--color-light-primary);
+        border-left: 1px solid var(--color-light-primary);
     }
 
     /* ERROR STATE TRANSFORMATIONS */
@@ -127,8 +122,8 @@
         top: 0;
         left: 0.4rem;
         font-size: 0.75rem;
-        border-right: 1px solid #cbc6ac;
-        border-left: 1px solid #cbc6ac;
+        border-right: 1px solid var(--color-light-primary);
+        border-left: 1px solid var(--color-light-primary);
     }
 
     /* BORDER BITS - BASE STYLES */
@@ -161,7 +156,7 @@
     input:not(:placeholder-shown) + label:not(.error)::before,
     input:focus + label:not(.error)::after,
     input:not(:placeholder-shown) + label:not(.error)::after {
-        background-color: #d26100;
+        background-color: var(--color-button-light);
     }
 
     /* BORDER BITS - ERROR STATE */

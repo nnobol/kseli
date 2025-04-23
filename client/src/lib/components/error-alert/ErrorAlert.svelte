@@ -25,7 +25,7 @@
         display: flex;
         align-items: center;
         text-align: center;
-        gap: 1rem;
+        gap: 1.5rem;
 
         background: #ffe4e4;
         color: #d8000c;
@@ -41,7 +41,8 @@
         overflow-wrap: break-word;
         white-space: pre-wrap;
         word-break: break-word;
-        font-weight: bold;
+        text-transform: uppercase;
+        font-weight: var(--font-weight-bold);
         font-size: 1rem;
         max-width: 15rem;
     }

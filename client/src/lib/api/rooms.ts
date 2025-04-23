@@ -56,14 +56,14 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CreateRoom
 
 export interface JoinRoomPayload {
     username: string;
-    roomSecretKey: string;
 }
 
 export interface JoinRoomOkResponse {
+    roomId: string;
     token: string;
 }
 
-export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promise<JoinRoomOkResponse> {
+export async function joinRoom(token: string, payload: JoinRoomPayload): Promise<JoinRoomOkResponse> {
     if (useMocks) {
         const { joinRoom: joinRoomMock } = await import('./mocks/rooms');
         return joinRoomMock(payload);
@@ -72,11 +72,11 @@ export async function joinRoom(roomId: string, payload: JoinRoomPayload): Promis
     try {
         const sessionId = getUserSessionId();
 
-        const response = await fetch(`/api/rooms/${roomId}/join`, {
+        const response = await fetch(`/api/rooms/join`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': API_KEY,
+                'Authorization': token,
                 'X-Participant-Session-Id': sessionId
             },
             body: JSON.stringify(payload),
@@ -111,8 +111,7 @@ export interface GetRoomOkResponse {
     maxParticipants: number;
     participants: Participant[];
     expiresAt: number;
-    roomId: string;
-    secretKey?: string;
+    inviteLink?: string;
 }
 
 export async function getRoom(roomId: string, token: string): Promise<GetRoomOkResponse> {

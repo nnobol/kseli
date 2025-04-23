@@ -9,7 +9,7 @@
         buttonText: string;
         loading: boolean;
         buttonDisabled: boolean;
-        closeModal: () => void;
+        closeModal: (() => void) | null;
         fields: Snippet;
         onSubmit: (event: Event) => Promise<void>;
     }
@@ -29,7 +29,9 @@
     <ModalHeader {headerTitle} {loading} {closeModal} />
 
     <form novalidate onsubmit={onSubmit}>
-        {@render fields()}
+        <div class="fields">
+            {@render fields()}
+        </div>
 
         <SubmitButton {buttonText} {loading} {buttonDisabled} />
     </form>
@@ -37,13 +39,30 @@
 
 <style>
     section {
+        display: flex;
+        flex-direction: column;
         text-align: center;
+        gap: 1.5rem;
 
-        background: #cbc6ac;
-        color: #32012f;
+        background: var(--color-light-primary);
+        color: var(--color-modal-text);
         padding: 1rem 2rem;
         border-radius: 8px;
         max-width: 25rem;
         width: 90%;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .fields {
+        display: flex;
+        flex-direction: column;
+        width: 90%;
+        gap: 1rem;
     }
 </style>

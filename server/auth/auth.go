@@ -13,11 +13,12 @@ import (
 	"kseli/config"
 )
 
-type contextKey string
+type ContextKey string
 
 const (
-	ParticipantClaimsKey    contextKey = "claims"
-	ParticipantSessionIDKey contextKey = "sessionId"
+	InviteClaimsKey         ContextKey = "inviteClaims"
+	ParticipantClaimsKey    ContextKey = "claims"
+	ParticipantSessionIDKey ContextKey = "sessionId"
 )
 
 type Claims struct {
@@ -28,10 +29,28 @@ type Claims struct {
 	Exp      int64       `json:"exp"`
 }
 
+type InviteClaims struct {
+	RoomID    string `json:"roomId"`
+	SecretKey string `json:"secretKey"`
+	Exp       int64  `json:"exp"`
+}
+
+type Expirable interface {
+	GetExp() int64
+}
+
+func (c Claims) GetExp() int64       { return c.Exp }
+func (c InviteClaims) GetExp() int64 { return c.Exp }
+
+type TokenClaims interface {
+	Expirable
+	Claims | InviteClaims
+}
+
 // Precomputed Base64-encoded JWT header: {"alg":"HS256","typ":"JWT"}
 const header = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
-func CreateToken(claims Claims) (string, error) {
+func CreateToken[T TokenClaims](claims T) (string, error) {
 	secretKey := config.SecretKey
 
 	payloadBytes, err := json.Marshal(claims)
@@ -50,8 +69,8 @@ func CreateToken(claims Claims) (string, error) {
 	return unsignedToken + "." + signature, nil
 }
 
-func ValidateToken(token string) (Claims, error) {
-	var claims Claims
+func ValidateToken[T TokenClaims](token string) (T, error) {
+	var claims T
 	secretKey := config.SecretKey
 
 	parts := strings.Split(token, ".")
@@ -77,7 +96,7 @@ func ValidateToken(token string) (Claims, error) {
 		return claims, errors.New("failed to parse claims")
 	}
 
-	if time.Now().Unix() > claims.Exp {
+	if time.Now().Unix() > claims.GetExp() {
 		return claims, errors.New("token has expired")
 	}
 

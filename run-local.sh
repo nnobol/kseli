@@ -14,10 +14,9 @@ cd ..
 
 cd builds
 if [ -d "client-new" ]; then
-    echo "Build complete. Swapping old and new client builds..."
-    mv client client-old || true
+    echo "Build complete. Replacing old client build..."
+    rm -rf client
     mv client-new client
-    rm -rf client-old
     echo "Swapped to new client build."
 else
     echo "Build directory client-new not found. Aborting."

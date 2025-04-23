@@ -13,9 +13,10 @@ import (
 type Room struct {
 	mu                 sync.RWMutex
 	nextParticipantID  uint8
-	roomID             string
 	maxParticipants    uint8
+	roomID             string
 	secretKey          string
+	inviteLink         string
 	participants       map[string]*Participant // key sessionID
 	bannedParticipants map[string]struct{}     // key sessionID
 	onClose            func(roomID string)
@@ -179,7 +180,7 @@ func (r *Room) Close(isScheduled bool) {
 
 func generateUniqueRoomID(s Storage) string {
 	for {
-		roomID := generateRoomID()
+		roomID := generateRandomString(6)
 
 		_, exists := s.GetRoom(roomID)
 
@@ -189,14 +190,8 @@ func generateUniqueRoomID(s Storage) string {
 	}
 }
 
-func generateRoomID() string {
-	b := make([]byte, 6)
-	rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-func generateSecretKey() string {
-	b := make([]byte, 10)
+func generateRandomString(nOfBytes uint8) string {
+	b := make([]byte, nOfBytes)
 	rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }

@@ -156,8 +156,10 @@
         padding-bottom: 0.25rem;
         margin-bottom: 0.25rem;
         border-bottom: 1px solid #ddd;
-        font-size: 1rem;
+        font-size: 0.8rem;
         text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.05rem;
     }
 
     ul {
@@ -177,6 +179,7 @@
     .participant-info {
         display: flex;
         gap: 0.2rem;
+        min-width: 0;
     }
 
     .role-icon {
@@ -188,6 +191,9 @@
     span {
         font-size: 0.8rem;
         line-height: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .admin-buttons {

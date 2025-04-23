@@ -73,8 +73,8 @@
 </script>
 
 <div class="message-input">
+    <div class="msg-len">{message.length}/{MAX_MESSAGE_LENGTH}</div>
     <div class="input-wrapper">
-        <div class="msg-len">{message.length}/{MAX_MESSAGE_LENGTH}</div>
         <input
             bind:this={inputEl}
             type="text"
@@ -83,8 +83,8 @@
             onkeypress={handleKeyPress}
             maxlength={MAX_MESSAGE_LENGTH}
         />
+        <button onclick={handleSend}>Send</button>
     </div>
-    <button onclick={handleSend}>Send</button>
 
     {#each errors as error, index (error.id)}
         <InlineToast
@@ -100,22 +100,23 @@
 <style>
     .message-input {
         display: flex;
-        align-items: flex-end;
-        gap: 0.5rem;
+        align-items: center;
+        gap: 0.25rem;
         padding-top: 0.5rem;
-    }
-
-    .input-wrapper {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+        flex-wrap: wrap;
     }
 
     .msg-len {
         font-size: 0.75rem;
         margin-left: 0.25rem;
-        margin-bottom: 0.25rem;
         color: #24292f;
+        width: 100%;
+    }
+
+    .input-wrapper {
+        display: flex;
+        width: 100%;
+        gap: 0.5rem;
     }
 
     input {
@@ -123,6 +124,7 @@
         padding: 0.5rem;
         border: 1px solid #ccc;
         border-radius: 4px;
+        font-size: 0.8rem;
     }
 
     button {

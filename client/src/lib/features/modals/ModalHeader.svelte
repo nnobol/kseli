@@ -4,31 +4,32 @@
     interface Props {
         headerTitle: string;
         loading: boolean;
-        closeModal: () => void;
+        closeModal: (() => void) | null;
     }
 
     let { headerTitle, loading, closeModal }: Props = $props();
 </script>
 
-<header>
+<div class="header">
     <h2 class="header-title {loading ? 'loading' : ''}">{headerTitle}</h2>
 
-    <CloseButton onClick={closeModal} disabled={loading} buttonType="modal" />
-</header>
+    {#if !!closeModal}
+        <CloseButton
+            onClick={closeModal}
+            disabled={loading}
+            buttonType="modal"
+        />
+    {/if}
+</div>
 
 <style>
-    header {
+    .header {
         position: relative;
         justify-content: center;
-        margin-bottom: 2rem;
     }
 
     .header-title {
-        font-weight: bold;
+        font-weight: var(--font-weight-bold);
         font-size: 1.5rem;
-    }
-
-    .header-title.loading {
-        opacity: 0.6;
     }
 </style>

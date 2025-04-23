@@ -1,21 +1,10 @@
 <script lang="ts">
     import ChatWindow from "./ChatWindow.svelte";
     import MessageInput from "./MessageInput.svelte";
-
-    interface Message {
-        username: string;
-        content: string;
-    }
-
-    interface Props {
-        messages: Message[];
-    }
-
-    let { messages }: Props = $props();
 </script>
 
 <div class="chat-container">
-    <ChatWindow {messages} />
+    <ChatWindow />
     <MessageInput />
 </div>
 

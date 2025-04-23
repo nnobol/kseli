@@ -7,12 +7,13 @@
 
     interface Props {
         expiresAt: number;
-        roomId: string;
-        secretKey?: string;
+        inviteLink?: string;
         currentUserRole: number;
+        adminUsername: string;
     }
 
-    let { expiresAt, roomId, secretKey, currentUserRole }: Props = $props();
+    let { expiresAt, inviteLink, currentUserRole, adminUsername }: Props =
+        $props();
 
     let toasts = $state<
         {
@@ -27,6 +28,7 @@
 
     let remainingTime: string = $state("Loading...");
     let intervalId: number | undefined = $state();
+    let truncatedInviteLink = inviteLink?.substring(0, 25) + "...";
 
     function formatTime(totalSeconds: number): string {
         const minutes = Math.floor(totalSeconds / 60);
@@ -119,30 +121,26 @@
         <div class="room-info-block">
             <h3>Room Info</h3>
             <div class="info-line">
-                <TooltipWrapper content="Room Id">
-                    <span
-                        class="copyable"
-                        onclick={(e) => copyToClipboard(e, roomId)}
-                    >
-                        {roomId}
-                    </span>
-                </TooltipWrapper>
-                <span class="separator">|</span>
+                <span class="username-container">
+                    <span class="username-truncated">{adminUsername}</span>
+                    <span>'s Room</span>
+                </span>
+                <span>|</span>
                 <TooltipWrapper content="Remaining Time">
                     <span>{remainingTime}</span>
                 </TooltipWrapper>
             </div>
         </div>
 
-        {#if currentUserRole === 1 && secretKey}
+        {#if currentUserRole === 1 && inviteLink}
             <div class="room-info-block">
-                <h3>Room Key</h3>
-                <div class="info-line">
+                <h3>Invite Link</h3>
+                <div class="info-line invite-container">
                     <span
-                        class="copyable"
-                        onclick={(e) => copyToClipboard(e, secretKey)}
+                        class="copyable invite-truncated"
+                        onclick={(e) => copyToClipboard(e, inviteLink)}
                     >
-                        {secretKey}
+                        {inviteLink}
                     </span>
                 </div>
             </div>
@@ -195,7 +193,7 @@
     .room-info-block h3 {
         font-size: 0.8rem;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.05rem;
         color: #24292f;
     }
 
@@ -205,6 +203,30 @@
         padding-bottom: 0.25rem;
         gap: 0.5rem;
         font-size: 0.8rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .username-container {
+        display: flex;
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    .username-truncated {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .invite-container {
+        max-width: 200px;
+        overflow: hidden;
+    }
+
+    .invite-truncated {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .copyable {
