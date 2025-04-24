@@ -119,7 +119,7 @@
         }
     }
 
-    @media (min-width: 768px) {
+    @media (min-width: 769px) and (min-height: 1080px) {
         main {
             padding: 2.5rem;
             gap: 8rem;
@@ -145,7 +145,7 @@
         gap: 1.5rem;
     }
 
-    @media (min-width: 768px) {
+    @media (min-width: 769px) {
         .text-container {
             gap: 3rem;
         }

@@ -74,11 +74,17 @@
     }
 
     .logo-container {
-        padding: 5rem 1rem;
+        padding: 3rem 1rem;
         display: flex;
         justify-content: center;
         background-image: url("/main-blob.png");
         background-size: 100% 100%;
+    }
+
+    @media (min-height: 1080px) {
+        .logo-container {
+            padding: 5rem 1rem;
+        }
     }
 
     .logo {

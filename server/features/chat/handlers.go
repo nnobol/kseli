@@ -455,7 +455,8 @@ func validateUsername(username string, fieldErrors map[string]string) {
 		return
 	}
 
-	if len(username) < 3 || len(username) > 15 {
+	runeCount := len([]rune(username))
+	if runeCount < 3 || runeCount > 15 {
 		fieldErrors["username"] = "Username must be between 3 and 15 characters."
 	}
 }
