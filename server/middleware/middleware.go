@@ -18,7 +18,7 @@ func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http
 }
 
 func ValidateOrigin() func(http.Handler) http.Handler {
-	allowedOrigins := map[string]struct{}{
+	allowedHosts := map[string]struct{}{
 		"localhost:3000": {},
 		"kseli.app":      {},
 		"www.kseli.app":  {},
@@ -45,7 +45,7 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 				return
 			}
 
-			if _, ok := allowedOrigins[originURL.Host]; !ok {
+			if _, ok := allowedHosts[originURL.Host]; !ok {
 				common.WriteError(w, http.StatusForbidden, "Origin not allowed. Access from this origin is restricted.")
 				return
 			}

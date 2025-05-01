@@ -1,25 +1,19 @@
-package main
+package router
 
 import (
-	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"kseli/config"
 	"kseli/features/chat"
 	"kseli/middleware"
 	"kseli/storage"
 )
 
-func main() {
-	config.LoadConfig()
-
-	storage := storage.InitializeStorage()
-
+func New() *http.ServeMux {
+	s := storage.InitializeStorage()
 	mux := http.NewServeMux()
 
 	env := os.Getenv("ENV")
@@ -30,7 +24,7 @@ func main() {
 
 	// POST request to create a chat room
 	mux.Handle("POST /api/rooms", middleware.WithMiddleware(
-		chat.CreateRoomHandler(storage),
+		chat.CreateRoomHandler(s),
 		middleware.ValidateParticipantSessionID(),
 		middleware.ValidateAPIKey(),
 		middleware.ValidateOrigin(),
@@ -38,7 +32,7 @@ func main() {
 
 	// POST request for a participant to join a chat room
 	mux.Handle("POST /api/rooms/join", middleware.WithMiddleware(
-		chat.JoinRoomHandler(storage),
+		chat.JoinRoomHandler(s),
 		middleware.ValidateInviteToken(),
 		middleware.ValidateParticipantSessionID(),
 		middleware.ValidateOrigin(),
@@ -46,39 +40,40 @@ func main() {
 
 	// GET request to get chat room details
 	mux.Handle("GET /api/rooms/{roomID}", middleware.WithMiddleware(
-		chat.GetRoomHandler(storage),
+		chat.GetRoomHandler(s),
 		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// DELETE request to close the chat room
 	mux.Handle("DELETE /api/rooms/{roomID}", middleware.WithMiddleware(
-		chat.DeleteRoomHandler(storage),
+		chat.DeleteRoomHandler(s),
 		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// POST request to kick a participant from a chat room
 	mux.Handle("POST /api/rooms/{roomID}/kick", middleware.WithMiddleware(
-		chat.KickParticipantHandler(storage),
+		chat.KickParticipantHandler(s),
 		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
 	// POST request to ban a user from a chat room
 	mux.Handle("POST /api/rooms/{roomID}/ban", middleware.WithMiddleware(
-		chat.BanParticipantHandler(storage),
+		chat.BanParticipantHandler(s),
 		middleware.ValidateParticipantToken(),
 		middleware.ValidateOrigin(),
 	))
 
-	mux.Handle("/ws/room", chat.RoomWSHandler(storage))
+	mux.Handle("/ws/room", chat.RoomWSHandler(s))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		filePath := filepath.Join(clientDir, r.URL.Path)
 		info, err := os.Stat(filePath)
 		if os.IsNotExist(err) || (err == nil && info.IsDir()) {
 			// Fallback to index.html for non-existent files or directories
+			// Let client side svelte router handle 404
 			http.ServeFile(w, r, filepath.Join(clientDir, "index.html"))
 			return
 		} else if err != nil {
@@ -110,18 +105,7 @@ func main() {
 		http.ServeFile(w, r, filePath)
 	}))
 
-	srv := &http.Server{
-		Addr:              ":3000",
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-	}
-
-	log.Println("Listening on :3000...")
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
+	return mux
 }
 
 func fileExists(path string) bool {

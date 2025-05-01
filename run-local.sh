@@ -26,4 +26,4 @@ cd ..
 
 echo "Starting Go server..."
 cd server
-go run main.go
+go run cmd/server/main.go

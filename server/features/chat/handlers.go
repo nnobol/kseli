@@ -26,6 +26,8 @@ type CreateRoomResponse struct {
 
 func CreateRoomHandler(s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 128)
+
 		var req CreateRoomRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -132,6 +134,8 @@ type JoinRoomResponse struct {
 
 func JoinRoomHandler(s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 128)
+
 		var req JoinRoomRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -278,6 +282,13 @@ func GetRoomHandler(s Storage) http.HandlerFunc {
 			return
 		}
 
+		_, exists = room.getParticipantByID(claims.UserID)
+		if !exists {
+			room.mu.RUnlock()
+			common.WriteError(w, http.StatusForbidden, "You are not in this room and can't retrieve the details. Try joining again.")
+			return
+		}
+
 		inviteLink := ""
 		if claims.Role == common.Admin {
 			inviteLink = room.inviteLink
@@ -294,7 +305,7 @@ func GetRoomHandler(s Storage) http.HandlerFunc {
 		}
 		room.mu.RUnlock()
 
-		common.WriteJSON(w, http.StatusCreated, resp)
+		common.WriteJSON(w, http.StatusOK, resp)
 	}
 }
 
@@ -345,6 +356,8 @@ type UserRequest struct {
 
 func performRoomAction(s Storage, action string, actionFunc func(r *Room, targetID uint8) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 128)
+
 		var req UserRequest
 
 		roomID := r.PathValue("roomID")
@@ -356,6 +369,11 @@ func performRoomAction(s Storage, action string, actionFunc func(r *Room, target
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			common.WriteError(w, http.StatusBadRequest, "Invalid JSON request body.")
+			return
+		}
+
+		if req.TargetUserID == 0 {
+			common.WriteError(w, http.StatusBadRequest, "User Id is required in the request.")
 			return
 		}
 
@@ -384,13 +402,13 @@ func performRoomAction(s Storage, action string, actionFunc func(r *Room, target
 			return
 		}
 
-		if req.TargetUserID == 0 {
-			common.WriteError(w, http.StatusBadRequest, "User Id not sent in the request.")
+		if claims.UserID == req.TargetUserID {
+			common.WriteError(w, http.StatusForbidden, fmt.Sprintf("You can't %s yourself from the room.", action))
 			return
 		}
 
 		if err := actionFunc(room, req.TargetUserID); err != nil {
-			common.WriteError(w, http.StatusInternalServerError, err.Error())
+			common.WriteError(w, http.StatusNotFound, err.Error())
 			return
 		}
 
@@ -462,12 +480,12 @@ func validateUsername(username string, fieldErrors map[string]string) {
 }
 
 func validateRoomId(roomID string) string {
-	if roomID == "" {
-		return "Chat Room Id is required."
-	}
-
 	if strings.Contains(roomID, " ") {
 		return "Chat Room Id cannot contain spaces."
+	}
+
+	if len(roomID) > 16 {
+		return "Incorrect Chat Room Id, it is too long."
 	}
 
 	return ""
