@@ -17,13 +17,30 @@ func WithMiddleware(handler http.Handler, middlewares ...func(http.Handler) http
 	return handler
 }
 
-func ValidateOrigin() func(http.Handler) http.Handler {
+func ValidateOriginHost(origin string) (int, string) {
 	allowedHosts := map[string]struct{}{
 		"localhost:3000": {},
 		"kseli.app":      {},
 		"www.kseli.app":  {},
 	}
 
+	if origin == "" {
+		return http.StatusForbidden, "Missing Origin header."
+	}
+
+	originURL, err := url.Parse(origin)
+	if err != nil || originURL.Host == "" {
+		return http.StatusBadRequest, "Invalid Origin header."
+	}
+
+	if _, ok := allowedHosts[originURL.Host]; !ok {
+		return http.StatusForbidden, "Origin not allowed. Access from this origin is restricted."
+	}
+
+	return 0, ""
+}
+
+func ValidateOrigin() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var origin string
@@ -34,20 +51,9 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 				origin = r.Header.Get("Origin")
 			}
 
-			if origin == "" {
-				common.WriteError(w, http.StatusForbidden, "Missing Origin header.")
-				return
-			}
-
-			originURL, err := url.Parse(origin)
-			if err != nil || originURL.Host == "" {
-				common.WriteError(w, http.StatusBadRequest, "Invalid Origin header.")
-				return
-			}
-
-			if _, ok := allowedHosts[originURL.Host]; !ok {
-				common.WriteError(w, http.StatusForbidden, "Origin not allowed. Access from this origin is restricted.")
-				return
+			status, err := ValidateOriginHost(origin)
+			if err != "" {
+				common.WriteError(w, status, err)
 			}
 
 			next.ServeHTTP(w, r)

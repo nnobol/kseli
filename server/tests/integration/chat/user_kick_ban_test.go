@@ -31,11 +31,11 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	}
 	createStatus, createRespBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
 	if createStatus != http.StatusCreated {
-		t.Fatalf("newGetEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
+		t.Fatalf("newKickBanEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
 	}
 	var createRespStruct chat.CreateRoomResponse
 	if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
+		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
 	}
 
 	// 2) Fetch invite link via GetRoomHandler as an admin
@@ -45,16 +45,16 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	}
 	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createRespStruct.RoomID, nil, getReqHeaders)
 	if getStatus != http.StatusOK {
-		t.Fatalf("newGetEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
+		t.Fatalf("newKickBanEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
 	}
 	var gerRespStruct chat.GetRoomResponse
 	if err := json.Unmarshal(getRespBody, &gerRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
+		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
 	}
 
 	parts := strings.Split(gerRespStruct.InviteLink, "?invite=")
 	if len(parts) != 2 {
-		t.Fatalf("newGetEnv - bad invite link %q", gerRespStruct.InviteLink)
+		t.Fatalf("newKickBanEnv - bad invite link %q", gerRespStruct.InviteLink)
 	}
 
 	// 3) Join the room to get the regular token
@@ -68,11 +68,11 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	}
 	joinStatus, joinRespBody := sendRequest(mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
 	if joinStatus != http.StatusCreated {
-		t.Fatalf("newGetEnv - expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
+		t.Fatalf("newKickBanEnv - expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
 	}
 	var joinRespStruct chat.JoinRoomResponse
 	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
+		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
 	}
 
 	return &getEnv{

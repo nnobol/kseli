@@ -2,6 +2,8 @@ package chat
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net"
 	"time"
 
@@ -11,23 +13,23 @@ import (
 	"github.com/gobwas/ws/wsutil"
 )
 
-type wsMsg struct {
+type WSMsg struct {
 	MsgType string      `json:"type"`
 	Data    interface{} `json:"data"`
 }
 
-type chatMsg struct {
+type ChatMsg struct {
 	Username string `json:"username"`
 	Content  string `json:"content"`
 }
 
-type joinMsg struct {
+type JoinMsg struct {
 	ID       uint8       `json:"id"`
 	Username string      `json:"username"`
 	Role     common.Role `json:"role"`
 }
 
-type leaveMsg struct {
+type LeaveMsg struct {
 	ID uint8 `json:"id"`
 }
 
@@ -73,6 +75,7 @@ func (r *Room) addWSConn(conn net.Conn, username string) {
 
 func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct{}) {
 	var cleanup bool
+	const maxMsgSize = 1024
 
 	defer func() {
 		if cleanup {
@@ -81,12 +84,14 @@ func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct
 		}
 	}()
 
+	msgReader := wsutil.NewReader(conn, ws.StateServerSide)
 	for {
-		// If "leave" is not received, the action on the client side might be a refresh and a tab or browser close
-		// On tab or browser close, we won't receive a ping so we clean up when ping fails in handleWrite
-		// In case of refresh, WS conn will be reastablished and ping won't fail so that is why we just break in that case
-		msg, op, err := wsutil.ReadClientData(conn)
+
+		hdr, err := msgReader.NextFrame()
 		if err != nil {
+			// If "leave" is not received, the action on the client side might be a refresh.
+			// In case of refresh, WS conn will be reastablished and that is why we don't clean up.
+			// We do however clean up in case "leave" is received.
 			if closeErr, ok := err.(wsutil.ClosedError); ok {
 				if closeErr.Reason == "leave" {
 					cleanup = true
@@ -95,9 +100,19 @@ func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct
 			return
 		}
 
-		switch op {
+		lr := io.LimitReader(msgReader, maxMsgSize+1)
+		buf := make([]byte, maxMsgSize+1)
+		n, _ := io.ReadFull(lr, buf)
+
+		if n > maxMsgSize {
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "message-too-large"))
+			cleanup = true
+			return
+		}
+
+		switch hdr.OpCode {
 		case ws.OpText:
-			r.broadcastChatMsg(username, string(msg))
+			r.broadcastChatMsg(username, string(buf[:n]))
 
 		case ws.OpBinary:
 			select {
@@ -200,7 +215,7 @@ func (r *Room) rmParticipantFromRoom(username string) {
 }
 
 func (r *Room) broadcastChatMsg(username, content string) {
-	msg := encodeWSMessage("msg", chatMsg{
+	msg := encodeWSMessage("msg", ChatMsg{
 		Username: username,
 		Content:  content,
 	})
@@ -208,7 +223,7 @@ func (r *Room) broadcastChatMsg(username, content string) {
 }
 
 func (r *Room) broadcastJoin(id uint8, uname string, role common.Role) {
-	msg := encodeWSMessage("join", joinMsg{
+	msg := encodeWSMessage("join", JoinMsg{
 		ID:       id,
 		Username: uname,
 		Role:     role,
@@ -217,7 +232,7 @@ func (r *Room) broadcastJoin(id uint8, uname string, role common.Role) {
 }
 
 func (r *Room) broadcastLeave(pID uint8) {
-	msg := encodeWSMessage("leave", leaveMsg{ID: pID})
+	msg := encodeWSMessage("leave", LeaveMsg{ID: pID})
 	r.broadcastMessage(msg)
 }
 
@@ -234,10 +249,19 @@ func (r *Room) broadcastMessage(msg []byte) {
 }
 
 func encodeWSMessage(msgType string, data interface{}) []byte {
-	msg := wsMsg{
+	msg := WSMsg{
 		MsgType: msgType,
 		Data:    data,
 	}
 	result, _ := json.Marshal(msg)
 	return result
+}
+
+func gracefulClose(conn net.Conn) {
+	if flusher, ok := conn.(interface{ Flush() error }); ok {
+		fmt.Printf("FLUSHABLE")
+		_ = flusher.Flush()
+	}
+
+	conn.Close()
 }

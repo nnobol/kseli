@@ -20,6 +20,7 @@ export const load: PageLoad = async () => {
         "token-invalid": "Authentication failed: token was invalid or expired.",
         "room-not-exists": "Unexpected error: this chat room does not exist.",
         "user-not-exists": "Unexpected error: you were not found in this room.",
+        "message-too-large": "Unexpected error: the size of the message you sent was too large.",
         "error": "An unexpected server error occurred.",
     };
 

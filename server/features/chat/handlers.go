@@ -9,6 +9,7 @@ import (
 
 	"kseli/auth"
 	"kseli/common"
+	"kseli/middleware"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -428,12 +429,32 @@ func BanParticipantHandler(s Storage) http.HandlerFunc {
 	})
 }
 
+var WaitForTestClientWSSetup chan struct{}
+
+func waitForTestClientWS() {
+	if WaitForTestClientWSSetup != nil {
+		<-WaitForTestClientWSSetup
+		time.Sleep(1 * time.Millisecond)
+	}
+}
+
 func RoomWSHandler(s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		_, errMsg := middleware.ValidateOriginHost(origin)
+
 		conn, _, _, err := ws.HTTPUpgrader{
 			Timeout: 2 * time.Second,
 		}.Upgrade(r, w)
 		if err != nil {
+			return
+		}
+
+		waitForTestClientWS()
+
+		if errMsg != "" {
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "invalid-origin"))
+			conn.Close()
 			return
 		}
 
