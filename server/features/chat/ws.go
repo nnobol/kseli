@@ -2,7 +2,6 @@ package chat
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -89,14 +88,6 @@ func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct
 
 		hdr, err := msgReader.NextFrame()
 		if err != nil {
-			// If "leave" is not received, the action on the client side might be a refresh.
-			// In case of refresh, WS conn will be reastablished and that is why we don't clean up.
-			// We do however clean up in case "leave" is received.
-			if closeErr, ok := err.(wsutil.ClosedError); ok {
-				if closeErr.Reason == "leave" {
-					cleanup = true
-				}
-			}
 			return
 		}
 
@@ -113,6 +104,16 @@ func (r *Room) handleRead(conn net.Conn, username string, pongChan chan<- struct
 		switch hdr.OpCode {
 		case ws.OpText:
 			r.broadcastChatMsg(username, string(buf[:n]))
+
+		case ws.OpClose:
+			_, reason := ws.ParseCloseFrameData(buf[:n])
+			if reason == "leave" {
+				// If "leave" is not received, the action on the client side might be a refresh.
+				// In case of refresh, WS conn will be reestablished and that is why we don't clean up.
+				// We do however clean up in case "leave" is received.
+				cleanup = true
+			}
+			return
 
 		case ws.OpBinary:
 			select {
@@ -171,14 +172,12 @@ func (r *Room) handleWrite(conn net.Conn, username string, msgQueue <-chan []byt
 	}
 }
 
-func (p *Participant) cleanupWSConn(reason string, sendCloseFrame bool) {
+func (p *Participant) cleanupWSConn(reason string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.wsConn != nil {
-		if sendCloseFrame {
-			wsutil.WriteServerMessage(p.wsConn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, reason))
-		}
+		wsutil.WriteServerMessage(p.wsConn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, reason))
 		p.wsConn.Close()
 		p.wsConn = nil
 	}
@@ -209,7 +208,7 @@ func (r *Room) rmParticipantFromRoom(username string) {
 		delete(r.participants, p.sessionID)
 		r.mu.Unlock()
 
-		p.cleanupWSConn("", false)
+		p.cleanupWSConn("")
 		r.broadcastLeave(p.id)
 	}
 }
@@ -255,13 +254,4 @@ func encodeWSMessage(msgType string, data interface{}) []byte {
 	}
 	result, _ := json.Marshal(msg)
 	return result
-}
-
-func gracefulClose(conn net.Conn) {
-	if flusher, ok := conn.(interface{ Flush() error }); ok {
-		fmt.Printf("FLUSHABLE")
-		_ = flusher.Flush()
-	}
-
-	conn.Close()
 }

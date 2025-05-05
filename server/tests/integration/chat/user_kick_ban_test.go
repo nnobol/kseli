@@ -20,30 +20,14 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	mux := router.New()
 
 	// 1) Create the room to get the admin token
-	createReqBody, _ := json.Marshal(chat.CreateRoomRequest{
-		Username:        "admin",
-		MaxParticipants: 2,
-	})
-	createReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"X-Api-Key":                config.APIKey,
-		"X-Participant-Session-Id": "admin-session-id",
-	}
-	createStatus, createRespBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
-	if createStatus != http.StatusCreated {
-		t.Fatalf("newKickBanEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
-	}
-	var createRespStruct chat.CreateRoomResponse
-	if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
-	}
+	createResp, _ := createRoom(t, true, 0, mux, 2, "http://kseli.app", config.APIKey, "admin")
 
 	// 2) Fetch invite link via GetRoomHandler as an admin
 	getReqHeaders := map[string]string{
 		"X-Origin":      "http://kseli.app",
-		"Authorization": createRespStruct.Token,
+		"Authorization": createResp.Token,
 	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createRespStruct.RoomID, nil, getReqHeaders)
+	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
 	if getStatus != http.StatusOK {
 		t.Fatalf("newKickBanEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
 	}
@@ -76,8 +60,8 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	}
 
 	return &getEnv{
-		roomID:       createRespStruct.RoomID,
-		adminToken:   createRespStruct.Token,
+		roomID:       createResp.RoomID,
+		adminToken:   createResp.Token,
 		regularToken: joinRespStruct.Token,
 		mux:          mux,
 	}
@@ -365,27 +349,7 @@ func Test_KickAndBan_AccessForbidden(t *testing.T) {
 			env := newKickBanEnv(t)
 
 			// 1) Create a new room (to get different claims and try to kick and ban using that)
-			createReqBody, _ := json.Marshal(chat.CreateRoomRequest{
-				Username:        "admin",
-				MaxParticipants: 2,
-			})
-
-			createReqHeaders := map[string]string{
-				"Origin":                   "http://kseli.app",
-				"X-Api-Key":                config.APIKey,
-				"X-Participant-Session-Id": "admin-session-id",
-			}
-
-			createStatus, createRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
-
-			if createStatus != http.StatusCreated {
-				t.Fatalf("newGetEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
-			}
-
-			var createRespStruct chat.CreateRoomResponse
-			if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-				t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
-			}
+			createResp, _ := createRoom(t, true, 0, env.mux, 2, "http://kseli.app", config.APIKey, "admin")
 
 			// 2) kick or ban the user using the different room id
 			body, _ := json.Marshal(chat.UserRequest{
@@ -397,7 +361,7 @@ func Test_KickAndBan_AccessForbidden(t *testing.T) {
 				"Authorization": env.adminToken,
 			}
 
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+createRespStruct.RoomID+"/"+action, bytes.NewReader(body), headers)
+			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+createResp.RoomID+"/"+action, bytes.NewReader(body), headers)
 
 			expectedStatus := http.StatusForbidden
 			if status != expectedStatus {

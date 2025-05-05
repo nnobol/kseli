@@ -25,31 +25,15 @@ func newGetEnv(t *testing.T) *getEnv {
 	config.APIKey = "test-api-key"
 	mux := router.New()
 
-	// 1) Create the room to get the admin
-	createReqBody, _ := json.Marshal(chat.CreateRoomRequest{
-		Username:        "admin",
-		MaxParticipants: 2,
-	})
-	createReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"X-Api-Key":                config.APIKey,
-		"X-Participant-Session-Id": "admin-session-id",
-	}
-	createStatus, createRespBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
-	if createStatus != http.StatusCreated {
-		t.Fatalf("newGetEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
-	}
-	var createRespStruct chat.CreateRoomResponse
-	if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
-	}
+	// 1) Create the room to get the admin token
+	createResp, _ := createRoom(t, true, 0, mux, 2, "http://kseli.app", config.APIKey, "admin")
 
 	// 2) Fetch invite link via GetRoomHandler as an admin
 	getReqHeaders := map[string]string{
 		"X-Origin":      "http://kseli.app",
-		"Authorization": createRespStruct.Token,
+		"Authorization": createResp.Token,
 	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createRespStruct.RoomID, nil, getReqHeaders)
+	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
 	if getStatus != http.StatusOK {
 		t.Fatalf("newGetEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
 	}
@@ -82,8 +66,8 @@ func newGetEnv(t *testing.T) *getEnv {
 	}
 
 	return &getEnv{
-		roomID:       createRespStruct.RoomID,
-		adminToken:   createRespStruct.Token,
+		roomID:       createResp.RoomID,
+		adminToken:   createResp.Token,
 		regularToken: joinRespStruct.Token,
 		mux:          mux,
 	}
@@ -181,32 +165,12 @@ func Test_GetRoom_AccessForbidden(t *testing.T) {
 	env := newGetEnv(t)
 
 	// 1) Create a new room (to get different claims and try to join using that)
-	createReqBody, _ := json.Marshal(chat.CreateRoomRequest{
-		Username:        "admin",
-		MaxParticipants: 2,
-	})
+	createResp, _ := createRoom(t, true, 0, env.mux, 2, "http://kseli.app", config.APIKey, "admin")
 
-	createReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"X-Api-Key":                config.APIKey,
-		"X-Participant-Session-Id": "admin-session-id",
-	}
-
-	createStatus, createRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
-
-	if createStatus != http.StatusCreated {
-		t.Fatalf("newGetEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
-	}
-
-	var createRespStruct chat.CreateRoomResponse
-	if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
-	}
-
-	// 2) Try to join the original room using the new token
+	// 2) Try to get the original room using the new token
 	headers := map[string]string{
 		"X-Origin":      "http://kseli.app",
-		"Authorization": createRespStruct.Token,
+		"Authorization": createResp.Token,
 	}
 
 	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+env.roomID, nil, headers)

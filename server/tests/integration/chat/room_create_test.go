@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -15,16 +14,6 @@ import (
 	"kseli/features/chat"
 	"kseli/router"
 )
-
-func sendRequest(handler http.Handler, method, url string, body io.Reader, headers map[string]string) (status int, respBody []byte) {
-	req := httptest.NewRequest(method, url, body)
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	return w.Result().StatusCode, w.Body.Bytes()
-}
 
 func newCreateEnv() *http.ServeMux {
 	config.APIKey = "test-api-key"
@@ -36,30 +25,10 @@ func newCreateEnv() *http.ServeMux {
 func Test_CreateRoom_Success(t *testing.T) {
 	mux := newCreateEnv()
 
-	body, _ := json.Marshal(chat.CreateRoomRequest{
-		Username:        "admin",
-		MaxParticipants: 3,
-	})
-	headers := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"X-Api-Key":                config.APIKey,
-		"X-Participant-Session-Id": "admin-session-id",
-	}
+	resp, _ := createRoom(t, true, 0, mux, 3, "http://kseli.app", config.APIKey, "admin")
 
-	status, respBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(body), headers)
-
-	expectedStatus := http.StatusCreated
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var respStruct chat.CreateRoomResponse
-	if err := json.Unmarshal(respBody, &respStruct); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	if respStruct.RoomID == "" || respStruct.Token == "" {
-		t.Fatalf("got empty RoomID or Token: %+v", respStruct)
+	if resp.RoomID == "" || resp.Token == "" {
+		t.Fatalf("got empty RoomID or Token: %+v", resp)
 	}
 }
 

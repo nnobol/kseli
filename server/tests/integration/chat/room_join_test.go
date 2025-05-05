@@ -29,30 +29,14 @@ func newJoinEnv(t *testing.T) *joinEnv {
 	mux := router.New()
 
 	// 1) Create the room
-	createReqBody, _ := json.Marshal(chat.CreateRoomRequest{
-		Username:        "admin",
-		MaxParticipants: 2,
-	})
-	createReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"X-Api-Key":                config.APIKey,
-		"X-Participant-Session-Id": "admin-session-id",
-	}
-	createStatus, createRespBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(createReqBody), createReqHeaders)
-	if createStatus != http.StatusCreated {
-		t.Fatalf("newJoinEnv - expected create 201, got %d, body: %s", createStatus, string(createRespBody))
-	}
-	var createRespStruct chat.CreateRoomResponse
-	if err := json.Unmarshal(createRespBody, &createRespStruct); err != nil {
-		t.Fatalf("newJoinEnv - failed to unmarshal: %v", err)
-	}
+	createResp, _ := createRoom(t, true, 0, mux, 2, "http://kseli.app", config.APIKey, "admin")
 
 	// 2) Fetch invite link via GetRoomHandler as an admin
 	getReqHeaders := map[string]string{
 		"X-Origin":      "http://kseli.app",
-		"Authorization": createRespStruct.Token,
+		"Authorization": createResp.Token,
 	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createRespStruct.RoomID, nil, getReqHeaders)
+	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
 	if getStatus != http.StatusOK {
 		t.Fatalf("newJoinEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
 	}
@@ -67,9 +51,9 @@ func newJoinEnv(t *testing.T) *joinEnv {
 	}
 
 	return &joinEnv{
-		roomID:      createRespStruct.RoomID,
+		roomID:      createResp.RoomID,
 		invitetoken: parts[1],
-		adminToken:  createRespStruct.Token,
+		adminToken:  createResp.Token,
 		mux:         mux,
 	}
 }
@@ -265,7 +249,7 @@ func Test_JoinRoom_AlreadyInRoom(t *testing.T) {
 	headers := map[string]string{
 		"Origin":                   "http://kseli.app",
 		"Authorization":            env.invitetoken,
-		"X-Participant-Session-Id": "admin-session-id",
+		"X-Participant-Session-Id": "admin",
 	}
 
 	status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(body), headers)

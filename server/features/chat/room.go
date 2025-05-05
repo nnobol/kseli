@@ -109,7 +109,7 @@ func (r *Room) kick(pID uint8) error {
 	r.mu.Unlock()
 
 	go func() {
-		p.cleanupWSConn("kick", true)
+		p.cleanupWSConn("kick")
 		r.broadcastLeave(p.id)
 	}()
 
@@ -130,7 +130,7 @@ func (r *Room) ban(pID uint8) error {
 	r.mu.Unlock()
 
 	go func() {
-		p.cleanupWSConn("ban", true)
+		p.cleanupWSConn("ban")
 		r.broadcastLeave(p.id)
 	}()
 
@@ -170,7 +170,7 @@ func (r *Room) Close(isScheduled bool) {
 			}
 		}
 
-		go p.cleanupWSConn(reason, true)
+		go p.cleanupWSConn(reason)
 	}
 
 	if onClose != nil {
