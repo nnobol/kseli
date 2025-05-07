@@ -30,6 +30,95 @@ func Test_CreateRoom_Success(t *testing.T) {
 	}
 }
 
+func Test_CreateRoom_OriginValidation(t *testing.T) {
+	mux := newCreateEnv()
+
+	type testCase struct {
+		name           string
+		origin         string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	tests := []testCase{
+		{
+			name:           "Origin missing",
+			origin:         "",
+			expectedStatus: http.StatusForbidden,
+			expectedErrMsg: "Missing Origin header.",
+		},
+		{
+			name:           "Invalid origin",
+			origin:         "invalid-origin",
+			expectedStatus: http.StatusBadRequest,
+			expectedErrMsg: "Invalid Origin header.",
+		},
+		{
+			name:           "Origin not allowed",
+			origin:         "http://kseli.apps",
+			expectedStatus: http.StatusForbidden,
+			expectedErrMsg: "Origin not allowed. Access from this origin is restricted.",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, errResp := createRoom(t, false, tc.expectedStatus, mux, 3, "admin", tc.origin, config.APIKey, "admin")
+
+			if errResp.Message != tc.expectedErrMsg {
+				t.Fatalf("[%s] expected error message %q, got %q", tc.name, tc.expectedErrMsg, errResp.Message)
+			}
+		})
+	}
+}
+
+func Test_CreateRoom_APIKeyValidation(t *testing.T) {
+	mux := newCreateEnv()
+
+	type testCase struct {
+		name           string
+		apiKey         string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	tests := []testCase{
+		{
+			name:           "API Key missing",
+			apiKey:         "",
+			expectedStatus: http.StatusUnauthorized,
+			expectedErrMsg: "Invalid or missing API key.",
+		},
+		{
+			name:           "Invalid API Key",
+			apiKey:         "invalid-key",
+			expectedStatus: http.StatusUnauthorized,
+			expectedErrMsg: "Invalid or missing API key.",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, errResp := createRoom(t, false, tc.expectedStatus, mux, 3, "admin", "http://kseli.app", tc.apiKey, "admin")
+
+			if errResp.Message != tc.expectedErrMsg {
+				t.Fatalf("[%s] expected error message %q, got %q", tc.name, tc.expectedErrMsg, errResp.Message)
+			}
+		})
+	}
+}
+
+func Test_CreateRoom_SessionIDValidation(t *testing.T) {
+	mux := newCreateEnv()
+
+	_, errResp := createRoom(t, false, 401, mux, 3, "admin", "http://kseli.app", config.APIKey, "")
+
+	expectedErrMsg := "Invalid or missing Session Id."
+	if errResp.Message != expectedErrMsg {
+		t.Fatalf("expected error message %q, got %q", expectedErrMsg, errResp.Message)
+	}
+}
+
 func Test_CreateRoom_BadRequests(t *testing.T) {
 	mux := newCreateEnv()
 

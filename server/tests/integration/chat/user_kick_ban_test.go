@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
+	"kseli/auth"
 	"kseli/common"
 	"kseli/config"
 	"kseli/router"
@@ -46,6 +48,114 @@ func Test_KickAndBan_Success(t *testing.T) {
 
 			kickOrBanUser(t, true, 0, env.mux, 2, action, env.roomID, "http://kseli.app", env.adminToken)
 		})
+	}
+}
+
+func Test_KickAndBan_OriginValidation(t *testing.T) {
+	env := newKickBanEnv(t)
+
+	actions := []string{
+		"kick", "ban",
+	}
+
+	type testCase struct {
+		name           string
+		origin         string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	for _, action := range actions {
+		tests := []testCase{
+			{
+				name:           "Origin missing",
+				origin:         "",
+				expectedStatus: http.StatusForbidden,
+				expectedErrMsg: "Missing Origin header.",
+			},
+			{
+				name:           "Invalid origin",
+				origin:         "invalid-origin",
+				expectedStatus: http.StatusBadRequest,
+				expectedErrMsg: "Invalid Origin header.",
+			},
+			{
+				name:           "Origin not allowed",
+				origin:         "http://kseli.apps",
+				expectedStatus: http.StatusForbidden,
+				expectedErrMsg: "Origin not allowed. Access from this origin is restricted.",
+			},
+		}
+
+		for _, tc := range tests {
+			tcName := action + ": " + tc.name
+			t.Run(tcName, func(t *testing.T) {
+				errResp := kickOrBanUser(t, false, tc.expectedStatus, env.mux, 2, action, env.roomID, tc.origin, env.adminToken)
+
+				if errResp.Message != tc.expectedErrMsg {
+					t.Fatalf("[%s] expected error message %q, got %q", tcName, tc.expectedErrMsg, errResp.Message)
+				}
+			})
+		}
+	}
+}
+
+func Test_KickAndBan_TokenValidation(t *testing.T) {
+	env := newKickBanEnv(t)
+
+	actions := []string{
+		"kick", "ban",
+	}
+
+	type testCase struct {
+		name           string
+		token          string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	for _, action := range actions {
+		tests := []testCase{
+			{
+				name:           "Token missing",
+				token:          "",
+				expectedStatus: http.StatusUnauthorized,
+				expectedErrMsg: "Missing Authorization token.",
+			},
+			{
+				name:           "Invalid token",
+				token:          "invalid-token",
+				expectedStatus: http.StatusUnauthorized,
+				expectedErrMsg: "Invalid or expired token.",
+			},
+			{
+				name: "Expired token",
+				token: func() string {
+					expiredClaims := auth.Claims{
+						UserID:   1,
+						Username: "does-not-matter",
+						Role:     common.Admin,
+						RoomID:   "does-not-matter",
+						Exp:      time.Now().Add(-1 * time.Minute).Unix(),
+					}
+					token, _ := auth.CreateToken(expiredClaims)
+					return token
+				}(),
+				expectedStatus: http.StatusUnauthorized,
+				expectedErrMsg: "Invalid or expired token.",
+			},
+		}
+
+		for _, tc := range tests {
+			tcName := action + ": " + tc.name
+			t.Run(tcName, func(t *testing.T) {
+				errResp := kickOrBanUser(t, false, tc.expectedStatus, env.mux, 2, action, env.roomID, "http://kseli.app", tc.token)
+
+				if errResp.Message != tc.expectedErrMsg {
+					t.Fatalf("[%s] expected error message %q, got %q", tcName, tc.expectedErrMsg, errResp.Message)
+				}
+			})
+		}
 	}
 }
 

@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
+	"kseli/auth"
 	"kseli/common"
 	"kseli/config"
 	"kseli/features/chat"
@@ -70,6 +72,100 @@ func Test_GetRoom_Success_User(t *testing.T) {
 
 	if resp.InviteLink != "" {
 		t.Fatal("expected empty InviteLink for regular user")
+	}
+}
+
+func Test_GetRoom_OriginValidation(t *testing.T) {
+	env := newGetEnv(t)
+
+	type testCase struct {
+		name           string
+		origin         string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	tests := []testCase{
+		{
+			name:           "Origin missing",
+			origin:         "",
+			expectedStatus: http.StatusForbidden,
+			expectedErrMsg: "Missing Origin header.",
+		},
+		{
+			name:           "Invalid origin",
+			origin:         "invalid-origin",
+			expectedStatus: http.StatusBadRequest,
+			expectedErrMsg: "Invalid Origin header.",
+		},
+		{
+			name:           "Origin not allowed",
+			origin:         "http://kseli.apps",
+			expectedStatus: http.StatusForbidden,
+			expectedErrMsg: "Origin not allowed. Access from this origin is restricted.",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, errResp := getRoom(t, false, true, tc.expectedStatus, env.mux, env.roomID, tc.origin, env.adminToken)
+
+			if errResp.Message != tc.expectedErrMsg {
+				t.Fatalf("[%s] expected error message %q, got %q", tc.name, tc.expectedErrMsg, errResp.Message)
+			}
+		})
+	}
+}
+
+func Test_GetRoom_TokenValidation(t *testing.T) {
+	env := newGetEnv(t)
+
+	type testCase struct {
+		name           string
+		token          string
+		expectedStatus int
+		expectedErrMsg string
+	}
+
+	tests := []testCase{
+		{
+			name:           "Token missing",
+			token:          "",
+			expectedStatus: http.StatusUnauthorized,
+			expectedErrMsg: "Missing Authorization token.",
+		},
+		{
+			name:           "Invalid token",
+			token:          "invalid-token",
+			expectedStatus: http.StatusUnauthorized,
+			expectedErrMsg: "Invalid or expired token.",
+		},
+		{
+			name: "Expired token",
+			token: func() string {
+				expiredClaims := auth.Claims{
+					UserID:   1,
+					Username: "does-not-matter",
+					Role:     common.Admin,
+					RoomID:   "does-not-matter",
+					Exp:      time.Now().Add(-1 * time.Minute).Unix(),
+				}
+				token, _ := auth.CreateToken(expiredClaims)
+				return token
+			}(),
+			expectedStatus: http.StatusUnauthorized,
+			expectedErrMsg: "Invalid or expired token.",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, errResp := getRoom(t, false, true, tc.expectedStatus, env.mux, env.roomID, "http://kseli.app", tc.token)
+
+			if errResp.Message != tc.expectedErrMsg {
+				t.Fatalf("[%s] expected error message %q, got %q", tc.name, tc.expectedErrMsg, errResp.Message)
+			}
+		})
 	}
 }
 

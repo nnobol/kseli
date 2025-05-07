@@ -54,6 +54,7 @@ func ValidateOrigin() func(http.Handler) http.Handler {
 			status, err := ValidateOriginHost(origin)
 			if err != "" {
 				common.WriteError(w, status, err)
+				return
 			}
 
 			next.ServeHTTP(w, r)
