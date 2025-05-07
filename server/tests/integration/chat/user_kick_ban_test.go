@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
 	"kseli/common"
 	"kseli/config"
-	"kseli/features/chat"
 	"kseli/router"
 )
 
@@ -20,49 +18,18 @@ func newKickBanEnv(t *testing.T) *getEnv {
 	mux := router.New()
 
 	// 1) Create the room to get the admin token
-	createResp, _ := createRoom(t, true, 0, mux, 2, "http://kseli.app", config.APIKey, "admin")
+	createResp, _ := createRoom(t, true, 0, mux, 2, "admin", "http://kseli.app", config.APIKey, "admin")
 
-	// 2) Fetch invite link via GetRoomHandler as an admin
-	getReqHeaders := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": createResp.Token,
-	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
-	if getStatus != http.StatusOK {
-		t.Fatalf("newKickBanEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
-	}
-	var gerRespStruct chat.GetRoomResponse
-	if err := json.Unmarshal(getRespBody, &gerRespStruct); err != nil {
-		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
-	}
-
-	parts := strings.Split(gerRespStruct.InviteLink, "?invite=")
-	if len(parts) != 2 {
-		t.Fatalf("newKickBanEnv - bad invite link %q", gerRespStruct.InviteLink)
-	}
+	// 2) Fetch invite token via get room as an admin
+	inviteToken, _, _ := getRoom(t, true, true, 0, mux, createResp.RoomID, "http://kseli.app", createResp.Token)
 
 	// 3) Join the room to get the regular token
-	joinReqBody, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            parts[1],
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinStatus, joinRespBody := sendRequest(mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
-	if joinStatus != http.StatusCreated {
-		t.Fatalf("newKickBanEnv - expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
-	}
-	var joinRespStruct chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
-	}
+	joinResp, _ := joinRoom(t, true, 0, mux, "user", "http://kseli.app", inviteToken, "user")
 
 	return &getEnv{
 		roomID:       createResp.RoomID,
 		adminToken:   createResp.Token,
-		regularToken: joinRespStruct.Token,
+		regularToken: joinResp.Token,
 		mux:          mux,
 	}
 }
@@ -77,20 +44,7 @@ func Test_KickAndBan_Success(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			env := newKickBanEnv(t)
 
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 2,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/"+action, bytes.NewReader(body), headers)
-
-			if status != http.StatusNoContent {
-				t.Fatalf("[%s] expected %d, got %d, body: %s", tcName, http.StatusNoContent, status, string(respBody))
-			}
+			kickOrBanUser(t, true, 0, env.mux, 2, action, env.roomID, "http://kseli.app", env.adminToken)
 		})
 	}
 }
@@ -230,30 +184,14 @@ func Test_KickAndBan_RoomIDValidation(t *testing.T) {
 		for _, tc := range tests {
 			tcName := action + ": " + tc.name
 			t.Run(tcName, func(t *testing.T) {
-				body, _ := json.Marshal(chat.UserRequest{
-					TargetUserID: 2,
-				})
-
-				headers := map[string]string{
-					"Origin":        "http://kseli.app",
-					"Authorization": env.adminToken,
-				}
-
-				status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+url.PathEscape(tc.roomID)+"/"+action, bytes.NewReader(body), headers)
-
-				if status != tc.expectedStatus {
-					t.Fatalf("[%s] expected %d, got %d, body: %s", tcName, tc.expectedStatus, status, string(respBody))
-				}
-
 				if tc.expectedStatus != http.StatusNoContent {
-					var errResp common.ErrorResponse
-					if err := json.Unmarshal(respBody, &errResp); err != nil {
-						t.Fatalf("[%s] failed to unmarshal: %v", tcName, err)
-					}
+					errResp := kickOrBanUser(t, false, tc.expectedStatus, env.mux, 2, action, tc.roomID, "http://kseli.app", env.adminToken)
 
 					if errResp.Message != tc.expectedRoomIDError {
 						t.Fatalf("[%s] expected error message %q, got %q", tcName, tc.expectedRoomIDError, errResp.Message)
 					}
+				} else {
+					kickOrBanUser(t, true, 0, env.mux, 2, action, tc.roomID, "http://kseli.app", env.adminToken)
 				}
 			})
 		}
@@ -270,26 +208,7 @@ func Test_KickAndBan_UserIDEmpty(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			env := newKickBanEnv(t)
 
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 0,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusBadRequest
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 400, env.mux, 0, action, env.roomID, "http://kseli.app", env.adminToken)
 
 			expectedErrMsg := "User Id is required in the request."
 			if errResp.Message != expectedErrMsg {
@@ -309,26 +228,7 @@ func Test_KickAndBan_RoomNotFound(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			env := newKickBanEnv(t)
 
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 2,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/non-existent-id/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusNotFound
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 404, env.mux, 2, action, "invalid-room-id", "http://kseli.app", env.adminToken)
 
 			expectedErrMsg := "Chat Room not found."
 			if errResp.Message != expectedErrMsg {
@@ -349,29 +249,10 @@ func Test_KickAndBan_AccessForbidden(t *testing.T) {
 			env := newKickBanEnv(t)
 
 			// 1) Create a new room (to get different claims and try to kick and ban using that)
-			createResp, _ := createRoom(t, true, 0, env.mux, 2, "http://kseli.app", config.APIKey, "admin")
+			createResp, _ := createRoom(t, true, 0, env.mux, 2, "admin", "http://kseli.app", config.APIKey, "admin")
 
 			// 2) kick or ban the user using the different room id
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 2,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+createResp.RoomID+"/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusForbidden
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 403, env.mux, 2, action, createResp.RoomID, "http://kseli.app", env.adminToken)
 
 			expectedErrMsg := "You do not have access to this room."
 			if errResp.Message != expectedErrMsg {
@@ -391,26 +272,7 @@ func Test_KickAndBan_NotAdmin(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			env := newKickBanEnv(t)
 
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 2,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.regularToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusForbidden
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 403, env.mux, 2, action, env.roomID, "http://kseli.app", env.regularToken)
 
 			expectedErrMsg := fmt.Sprintf("You are not an admin and can't %s anyone from this room.", action)
 			if errResp.Message != expectedErrMsg {
@@ -430,26 +292,7 @@ func Test_KickAndBan_ActionOnAdmin(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			env := newKickBanEnv(t)
 
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: 1,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusForbidden
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 400, env.mux, 1, action, env.roomID, "http://kseli.app", env.adminToken)
 
 			expectedErrMsg := fmt.Sprintf("You can't %s yourself from the room.", action)
 			if errResp.Message != expectedErrMsg {
@@ -470,27 +313,7 @@ func Test_KickAndBan_UserNotFound(t *testing.T) {
 			env := newKickBanEnv(t)
 
 			var userID uint8 = 3
-
-			body, _ := json.Marshal(chat.UserRequest{
-				TargetUserID: userID,
-			})
-
-			headers := map[string]string{
-				"Origin":        "http://kseli.app",
-				"Authorization": env.adminToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/"+action, bytes.NewReader(body), headers)
-
-			expectedStatus := http.StatusNotFound
-			if status != expectedStatus {
-				t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-			}
-
-			var errResp common.ErrorResponse
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				t.Fatalf("failed to unmarshal: %v", err)
-			}
+			errResp := kickOrBanUser(t, false, 404, env.mux, userID, action, env.roomID, "http://kseli.app", env.adminToken)
 
 			expectedErrMsg := fmt.Sprintf("Participant with ID '%d' not found in room", userID)
 			if errResp.Message != expectedErrMsg {

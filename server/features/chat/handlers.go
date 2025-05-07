@@ -404,7 +404,7 @@ func performRoomAction(s Storage, action string, actionFunc func(r *Room, target
 		}
 
 		if claims.UserID == req.TargetUserID {
-			common.WriteError(w, http.StatusForbidden, fmt.Sprintf("You can't %s yourself from the room.", action))
+			common.WriteError(w, http.StatusBadRequest, fmt.Sprintf("You can't %s yourself from the room.", action))
 			return
 		}
 

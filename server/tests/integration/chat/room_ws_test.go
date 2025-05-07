@@ -1,14 +1,12 @@
 package chat_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"kseli/common"
@@ -34,32 +32,17 @@ func newRoomWSEnv(t *testing.T) *roomWSEnv {
 	mux := router.New()
 
 	// 1) Create the room to get the admin token
-	createResp, _ := createRoom(t, true, 0, mux, 3, "http://kseli.app", config.APIKey, "admin")
+	createResp, _ := createRoom(t, true, 0, mux, 3, "admin", "http://kseli.app", config.APIKey, "admin")
 
-	getReqHeaders := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": createResp.Token,
-	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
-	if getStatus != http.StatusOK {
-		t.Fatalf("newKickBanEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
-	}
-	var gerRespStruct chat.GetRoomResponse
-	if err := json.Unmarshal(getRespBody, &gerRespStruct); err != nil {
-		t.Fatalf("newKickBanEnv - failed to unmarshal: %v", err)
-	}
-
-	parts := strings.Split(gerRespStruct.InviteLink, "?invite=")
-	if len(parts) != 2 {
-		t.Fatalf("newKickBanEnv - bad invite link %q", gerRespStruct.InviteLink)
-	}
+	// 2) Fetch invite token via get room as an admin
+	inviteToken, _, _ := getRoom(t, true, true, 0, mux, createResp.RoomID, "http://kseli.app", createResp.Token)
 
 	server := httptest.NewServer(mux)
 	serverAddr := server.Listener.Addr().String()
 
 	return &roomWSEnv{
 		token:       createResp.Token,
-		inviteToken: parts[1],
+		inviteToken: inviteToken,
 		roomID:      createResp.RoomID,
 		server:      server,
 		serverAddr:  serverAddr,
@@ -71,26 +54,10 @@ func Test_RoomWS_Success_JoinMsgReceived(t *testing.T) {
 	env := newRoomWSEnv(t)
 
 	// join request to add a new user to the room
-	joinReqBody, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            env.inviteToken,
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinStatus, joinRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
-	if joinStatus != http.StatusCreated {
-		t.Fatalf("Join: expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
-	}
-
-	var joinRespStruct chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("Join: failed to unmarshal: %v", err)
-	}
+	joinResp, _ := joinRoom(t, true, 0, env.mux, "user", "http://kseli.app", env.inviteToken, "user")
 
 	wsURL1 := "ws://" + env.serverAddr + "/ws/room?token=" + env.token
-	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinRespStruct.Token
+	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinResp.Token
 
 	dialer := ws.Dialer{
 		Header: ws.HandshakeHeaderHTTP{
@@ -125,26 +92,10 @@ func Test_RoomWS_Success_ChatMsgReceived(t *testing.T) {
 	env := newRoomWSEnv(t)
 
 	// join request to add a new user to the room
-	joinReqBody, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            env.inviteToken,
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinStatus, joinRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
-	if joinStatus != http.StatusCreated {
-		t.Fatalf("Join: expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
-	}
-
-	var joinRespStruct chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("Join: failed to unmarshal: %v", err)
-	}
+	joinResp, _ := joinRoom(t, true, 0, env.mux, "user", "http://kseli.app", env.inviteToken, "user")
 
 	wsURL1 := "ws://" + env.serverAddr + "/ws/room?token=" + env.token
-	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinRespStruct.Token
+	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinResp.Token
 
 	dialer := ws.Dialer{
 		Header: ws.HandshakeHeaderHTTP{
@@ -193,43 +144,13 @@ func Test_RoomWS_Success_ChatMsgReceived(t *testing.T) {
 func Test_RoomWS_Success_LeaveMsgReceived(t *testing.T) {
 	env := newRoomWSEnv(t)
 
-	// 2 join requests to add a new users to the room
-	joinReqHeaders1 := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            env.inviteToken,
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinReqHeaders2 := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            env.inviteToken,
-		"X-Participant-Session-Id": "user2-session-id",
-	}
-	joinReqBody1, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqBody2, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user2",
-	})
-	joinStatus1, joinRespBody1 := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody1), joinReqHeaders1)
-	if joinStatus1 != http.StatusCreated {
-		t.Fatalf("Join: expected join 201, got %d, body: %s", joinStatus1, string(joinRespBody1))
-	}
-	joinStatus2, joinRespBody2 := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody2), joinReqHeaders2)
-	if joinStatus2 != http.StatusCreated {
-		t.Fatalf("Join: expected join 201, got %d, body: %s", joinStatus1, string(joinRespBody2))
-	}
-	var joinRespStruct1 chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody1, &joinRespStruct1); err != nil {
-		t.Fatalf("Join: failed to unmarshal: %v", err)
-	}
-	var joinRespStruct2 chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody2, &joinRespStruct2); err != nil {
-		t.Fatalf("Join: failed to unmarshal: %v", err)
-	}
+	// two join requests to add 2 other users to the room
+	joinResp1, _ := joinRoom(t, true, 0, env.mux, "user1", "http://kseli.app", env.inviteToken, "user1")
+	joinResp2, _ := joinRoom(t, true, 0, env.mux, "user2", "http://kseli.app", env.inviteToken, "user2")
 
 	wsURL1 := "ws://" + env.serverAddr + "/ws/room?token=" + env.token
-	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinRespStruct1.Token
-	wsURL3 := "ws://" + env.serverAddr + "/ws/room?token=" + joinRespStruct2.Token
+	wsURL2 := "ws://" + env.serverAddr + "/ws/room?token=" + joinResp1.Token
+	wsURL3 := "ws://" + env.serverAddr + "/ws/room?token=" + joinResp2.Token
 
 	dialer := ws.Dialer{
 		Header: ws.HandshakeHeaderHTTP{
@@ -422,17 +343,7 @@ func Test_RoomWS_RoomNotExists(t *testing.T) {
 	env := newRoomWSEnv(t)
 
 	// 1) close the room with delete request
-	headers := map[string]string{
-		"Origin":        "http://kseli.app",
-		"Authorization": env.token,
-	}
-
-	status, respBody := sendRequest(env.mux, http.MethodDelete, "/api/rooms/"+env.roomID, nil, headers)
-
-	expectedStatus := http.StatusNoContent
-	if status != expectedStatus {
-		t.Fatalf("Delete: expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
+	deleteRoom(t, true, 0, env.mux, env.roomID, "http://kseli.app", env.token)
 
 	// 2) try connecting to the ws
 	wsURL := "ws://" + env.serverAddr + "/ws/room?token=" + env.token
@@ -486,42 +397,13 @@ func Test_RoomWS_UserNotExists(t *testing.T) {
 	env := newRoomWSEnv(t)
 
 	// 1) join the room as a new user
-	joinReqBody, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            env.inviteToken,
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinStatus, joinRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
-	if joinStatus != http.StatusCreated {
-		t.Fatalf("Join: expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
-	}
-
-	var joinRespStruct chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("Join: failed to unmarshal: %v", err)
-	}
+	joinResp, _ := joinRoom(t, true, 0, env.mux, "user", "http://kseli.app", env.inviteToken, "user")
 
 	// 2) kick the user from the room
-	kickBody, _ := json.Marshal(chat.UserRequest{
-		TargetUserID: 2,
-	})
-	kickHeaders := map[string]string{
-		"Origin":        "http://kseli.app",
-		"Authorization": env.token,
-	}
-
-	kickStatus, kickRespBody := sendRequest(env.mux, http.MethodPost, "/api/rooms/"+env.roomID+"/kick", bytes.NewReader(kickBody), kickHeaders)
-
-	kickExpectedStatus := http.StatusNoContent
-	if kickStatus != kickExpectedStatus {
-		t.Fatalf("Kick: expected %d, got %d, body: %s", kickExpectedStatus, kickStatus, string(kickRespBody))
-	}
+	kickOrBanUser(t, true, 0, env.mux, 2, "kick", env.roomID, "http://kseli.app", env.token)
 
 	// 2) try connecting to the ws
-	wsURL := "ws://" + env.serverAddr + "/ws/room?token=" + joinRespStruct.Token
+	wsURL := "ws://" + env.serverAddr + "/ws/room?token=" + joinResp.Token
 
 	dialer := ws.Dialer{
 		Header: ws.HandshakeHeaderHTTP{

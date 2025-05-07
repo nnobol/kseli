@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -26,49 +25,18 @@ func newGetEnv(t *testing.T) *getEnv {
 	mux := router.New()
 
 	// 1) Create the room to get the admin token
-	createResp, _ := createRoom(t, true, 0, mux, 2, "http://kseli.app", config.APIKey, "admin")
+	createResp, _ := createRoom(t, true, 0, mux, 2, "admin", "http://kseli.app", config.APIKey, "admin")
 
-	// 2) Fetch invite link via GetRoomHandler as an admin
-	getReqHeaders := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": createResp.Token,
-	}
-	getStatus, getRespBody := sendRequest(mux, http.MethodGet, "/api/rooms/"+createResp.RoomID, nil, getReqHeaders)
-	if getStatus != http.StatusOK {
-		t.Fatalf("newGetEnv - expected get 200, got %d, body: %s", getStatus, string(getRespBody))
-	}
-	var gerRespStruct chat.GetRoomResponse
-	if err := json.Unmarshal(getRespBody, &gerRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
-	}
-
-	parts := strings.Split(gerRespStruct.InviteLink, "?invite=")
-	if len(parts) != 2 {
-		t.Fatalf("newGetEnv - bad invite link %q", gerRespStruct.InviteLink)
-	}
+	// 2) Fetch invite token via get room as an admin
+	inviteToken, _, _ := getRoom(t, true, true, 0, mux, createResp.RoomID, "http://kseli.app", createResp.Token)
 
 	// 3) Join the room to get the regular token
-	joinReqBody, _ := json.Marshal(chat.JoinRoomRequest{
-		Username: "user",
-	})
-	joinReqHeaders := map[string]string{
-		"Origin":                   "http://kseli.app",
-		"Authorization":            parts[1],
-		"X-Participant-Session-Id": "user-session-id",
-	}
-	joinStatus, joinRespBody := sendRequest(mux, http.MethodPost, "/api/rooms/join", bytes.NewReader(joinReqBody), joinReqHeaders)
-	if joinStatus != http.StatusCreated {
-		t.Fatalf("newGetEnv - expected join 201, got %d, body: %s", joinStatus, string(joinRespBody))
-	}
-	var joinRespStruct chat.JoinRoomResponse
-	if err := json.Unmarshal(joinRespBody, &joinRespStruct); err != nil {
-		t.Fatalf("newGetEnv - failed to unmarshal: %v", err)
-	}
+	joinResp, _ := joinRoom(t, true, 0, mux, "user", "http://kseli.app", inviteToken, "user")
 
 	return &getEnv{
 		roomID:       createResp.RoomID,
 		adminToken:   createResp.Token,
-		regularToken: joinRespStruct.Token,
+		regularToken: joinResp.Token,
 		mux:          mux,
 	}
 }
@@ -76,61 +44,31 @@ func newGetEnv(t *testing.T) *getEnv {
 func Test_GetRoom_Success_Admin(t *testing.T) {
 	env := newGetEnv(t)
 
-	headers := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": env.adminToken,
+	_, resp, _ := getRoom(t, true, true, 0, env.mux, env.roomID, "http://kseli.app", env.adminToken)
+
+	if resp.UserRole != common.Admin {
+		t.Fatalf("expected UserRole %v, got %v", common.Admin, resp.UserRole)
 	}
 
-	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+env.roomID, nil, headers)
-
-	expectedStatus := http.StatusOK
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var respStruct chat.GetRoomResponse
-	if err := json.Unmarshal(respBody, &respStruct); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	if respStruct.UserRole != common.Admin {
-		t.Fatalf("expected UserRole %v, got %v", common.Admin, respStruct.UserRole)
-	}
-
-	if respStruct.InviteLink == "" {
+	if resp.InviteLink == "" {
 		t.Fatal("expected non-empty InviteLink for admin user")
 	}
 
-	if !strings.Contains(respStruct.InviteLink, "?invite=") {
-		t.Fatalf("unexpected InviteLink format: %s", respStruct.InviteLink)
+	if !strings.Contains(resp.InviteLink, "?invite=") {
+		t.Fatalf("unexpected InviteLink format: %s", resp.InviteLink)
 	}
 }
 
 func Test_GetRoom_Success_User(t *testing.T) {
 	env := newGetEnv(t)
 
-	headers := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": env.regularToken,
+	_, resp, _ := getRoom(t, true, false, 0, env.mux, env.roomID, "http://kseli.app", env.regularToken)
+
+	if resp.UserRole != common.Member {
+		t.Fatalf("expected UserRole %v, got %v", common.Member, resp.UserRole)
 	}
 
-	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+env.roomID, nil, headers)
-
-	expectedStatus := http.StatusOK
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var respStruct chat.GetRoomResponse
-	if err := json.Unmarshal(respBody, &respStruct); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	if respStruct.UserRole != common.Member {
-		t.Fatalf("expected UserRole %v, got %v", common.Member, respStruct.UserRole)
-	}
-
-	if respStruct.InviteLink != "" {
+	if resp.InviteLink != "" {
 		t.Fatal("expected empty InviteLink for regular user")
 	}
 }
@@ -138,22 +76,7 @@ func Test_GetRoom_Success_User(t *testing.T) {
 func Test_GetRoom_RoomNotFound(t *testing.T) {
 	env := newGetEnv(t)
 
-	headers := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": env.regularToken,
-	}
-
-	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/non-existent-id", nil, headers)
-
-	expectedStatus := http.StatusNotFound
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var errResp common.ErrorResponse
-	if err := json.Unmarshal(respBody, &errResp); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
+	_, _, errResp := getRoom(t, false, false, 404, env.mux, "invalid-room-id", "http://kseli.app", env.regularToken)
 
 	expectedErrMsg := "Chat Room not found."
 	if errResp.Message != expectedErrMsg {
@@ -165,25 +88,10 @@ func Test_GetRoom_AccessForbidden(t *testing.T) {
 	env := newGetEnv(t)
 
 	// 1) Create a new room (to get different claims and try to join using that)
-	createResp, _ := createRoom(t, true, 0, env.mux, 2, "http://kseli.app", config.APIKey, "admin")
+	newRoom, _ := createRoom(t, true, 0, env.mux, 2, "admin", "http://kseli.app", config.APIKey, "admin")
 
 	// 2) Try to get the original room using the new token
-	headers := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": createResp.Token,
-	}
-
-	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+env.roomID, nil, headers)
-
-	expectedStatus := http.StatusForbidden
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var errResp common.ErrorResponse
-	if err := json.Unmarshal(respBody, &errResp); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
+	_, _, errResp := getRoom(t, false, false, 403, env.mux, env.roomID, "http://kseli.app", newRoom.Token)
 
 	expectedErrMsg := "You do not have access to this room."
 	if errResp.Message != expectedErrMsg {
@@ -211,22 +119,7 @@ func Test_GetRoom_UserNotInRoom(t *testing.T) {
 	}
 
 	// 2) try to get the room without rejoining
-	headers := map[string]string{
-		"X-Origin":      "http://kseli.app",
-		"Authorization": env.regularToken,
-	}
-
-	status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+env.roomID, nil, headers)
-
-	expectedStatus := http.StatusForbidden
-	if status != expectedStatus {
-		t.Fatalf("expected %d, got %d, body: %s", expectedStatus, status, string(respBody))
-	}
-
-	var errResp common.ErrorResponse
-	if err := json.Unmarshal(respBody, &errResp); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
+	_, _, errResp := getRoom(t, false, false, 403, env.mux, env.roomID, "http://kseli.app", env.regularToken)
 
 	expectedErrMsg := "You are not in this room and can't retrieve the details. Try joining again."
 	if errResp.Message != expectedErrMsg {
@@ -267,26 +160,14 @@ func Test_GetRoom_RoomIDValidation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			headers := map[string]string{
-				"X-Origin":      "http://kseli.app",
-				"Authorization": env.regularToken,
-			}
-
-			status, respBody := sendRequest(env.mux, http.MethodGet, "/api/rooms/"+url.PathEscape(tc.roomID), nil, headers)
-
-			if status != tc.expectedStatus {
-				t.Fatalf("[%s] expected %d, got %d, body: %s", tc.name, tc.expectedStatus, status, string(respBody))
-			}
-
 			if tc.expectedStatus != http.StatusOK {
-				var errResp common.ErrorResponse
-				if err := json.Unmarshal(respBody, &errResp); err != nil {
-					t.Fatalf("[%s] failed to unmarshal: %v", tc.name, err)
-				}
+				_, _, errResp := getRoom(t, false, false, tc.expectedStatus, env.mux, tc.roomID, "http://kseli.app", env.regularToken)
 
 				if errResp.Message != tc.expectedRoomIDError {
 					t.Fatalf("[%s] expected error message %q, got %q", tc.name, tc.expectedRoomIDError, errResp.Message)
 				}
+			} else {
+				getRoom(t, true, false, 0, env.mux, tc.roomID, "http://kseli.app", env.regularToken)
 			}
 		})
 	}

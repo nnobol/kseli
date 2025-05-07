@@ -1,7 +1,6 @@
 package chat_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +10,6 @@ import (
 
 	"kseli/common"
 	"kseli/config"
-	"kseli/features/chat"
 	"kseli/router"
 )
 
@@ -25,7 +23,7 @@ func newCreateEnv() *http.ServeMux {
 func Test_CreateRoom_Success(t *testing.T) {
 	mux := newCreateEnv()
 
-	resp, _ := createRoom(t, true, 0, mux, 3, "http://kseli.app", config.APIKey, "admin")
+	resp, _ := createRoom(t, true, 0, mux, 3, "admin", "http://kseli.app", config.APIKey, "admin")
 
 	if resp.RoomID == "" || resp.Token == "" {
 		t.Fatalf("got empty RoomID or Token: %+v", resp)
@@ -190,26 +188,8 @@ func Test_CreateRoom_UsernameValidation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			body, _ := json.Marshal(chat.CreateRoomRequest{
-				Username:        tc.username,
-				MaxParticipants: 3,
-			})
-			headers := map[string]string{
-				"Origin":                   "http://kseli.app",
-				"X-Api-Key":                config.APIKey,
-				"X-Participant-Session-Id": "admin-session-id",
-			}
-			status, respBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(body), headers)
-
-			if status != tc.expectedStatus {
-				t.Fatalf("[%s] expected %d, got %d, body: %s", tc.name, tc.expectedStatus, status, string(respBody))
-			}
-
 			if tc.expectedStatus != http.StatusCreated {
-				var errResp common.ErrorResponse
-				if err := json.Unmarshal(respBody, &errResp); err != nil {
-					t.Fatalf("[%s] failed to unmarshal: %v", tc.name, err)
-				}
+				_, errResp := createRoom(t, false, tc.expectedStatus, mux, 3, tc.username, "http://kseli.app", config.APIKey, "admin")
 
 				errMsg, ok := errResp.FieldErrors["username"]
 				if !ok {
@@ -219,6 +199,8 @@ func Test_CreateRoom_UsernameValidation(t *testing.T) {
 				if errMsg != tc.expectedUsernameError {
 					t.Fatalf("[%s] expected field error message %q, got %q", tc.name, tc.expectedUsernameError, errMsg)
 				}
+			} else {
+				createRoom(t, true, 0, mux, 3, tc.username, "http://kseli.app", config.APIKey, "admin")
 			}
 		})
 	}
@@ -263,35 +245,19 @@ func Test_CreateRoom_MaxParticipantsValidation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			body, _ := json.Marshal(chat.CreateRoomRequest{
-				Username:        "admin",
-				MaxParticipants: tc.maxParticipants,
-			})
-			headers := map[string]string{
-				"Origin":                   "http://kseli.app",
-				"X-Api-Key":                config.APIKey,
-				"X-Participant-Session-Id": "admin-session-id",
-			}
-			status, respBody := sendRequest(mux, http.MethodPost, "/api/rooms", bytes.NewReader(body), headers)
-
-			if status != tc.expectedStatus {
-				t.Fatalf("[%s] expected %d, got %d, body: %s", tc.name, tc.expectedStatus, status, string(respBody))
-			}
-
 			if tc.expectedStatus != http.StatusCreated {
-				var errResp common.ErrorResponse
-				if err := json.Unmarshal(respBody, &errResp); err != nil {
-					t.Fatalf("[%s] failed to unmarshal: %v", tc.name, err)
-				}
+				_, errResp := createRoom(t, false, tc.expectedStatus, mux, tc.maxParticipants, "admin", "http://kseli.app", config.APIKey, "admin")
 
 				errMsg, ok := errResp.FieldErrors["maxParticipants"]
 				if !ok {
-					t.Fatalf("[%s] expected field error for 'maxParticipants', but none found", tc.name)
+					t.Fatalf("[%s] expected field error for 'username', but none found", tc.name)
 				}
 
 				if errMsg != tc.expectedMaxParticipantsError {
 					t.Fatalf("[%s] expected field error message %q, got %q", tc.name, tc.expectedMaxParticipantsError, errMsg)
 				}
+			} else {
+				createRoom(t, true, 0, mux, tc.maxParticipants, "admin", "http://kseli.app", config.APIKey, "admin")
 			}
 		})
 	}
