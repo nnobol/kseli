@@ -92,7 +92,18 @@ func Test_JoinRoom_OriginValidation(t *testing.T) {
 	}
 }
 
-func Test_JoinRoom_TokenValidation(t *testing.T) {
+func Test_JoinRoom_SessionIDValidation(t *testing.T) {
+	env := newJoinEnv(t)
+
+	_, errResp := joinRoom(t, false, 401, env.mux, "user", "http://kseli.app", env.invitetoken, "")
+
+	expectedErrMsg := "Invalid or missing Session Id."
+	if errResp.Message != expectedErrMsg {
+		t.Fatalf("expected error message %q, got %q", expectedErrMsg, errResp.Message)
+	}
+}
+
+func Test_JoinRoom_InviteTokenValidation(t *testing.T) {
 	env := newJoinEnv(t)
 
 	type testCase struct {
@@ -118,12 +129,10 @@ func Test_JoinRoom_TokenValidation(t *testing.T) {
 		{
 			name: "Expired token",
 			token: func() string {
-				expiredClaims := auth.Claims{
-					UserID:   1,
-					Username: "does-not-matter",
-					Role:     common.Admin,
-					RoomID:   "does-not-matter",
-					Exp:      time.Now().Add(-1 * time.Minute).Unix(),
+				expiredClaims := auth.InviteClaims{
+					RoomID:    "does-not-matter",
+					SecretKey: "does-not-matter",
+					Exp:       time.Now().Add(-1 * time.Minute).Unix(),
 				}
 				token, _ := auth.CreateToken(expiredClaims)
 				return token
