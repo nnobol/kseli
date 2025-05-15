@@ -7,6 +7,7 @@
     import ErrorAlert from "../../components/error-alert/ErrorAlert.svelte";
     import { createRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
+    import { keyStore, generateEncryptionKey } from "$lib/stores/keyStore";
     import type { CreateRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
 
     interface Props {
@@ -79,7 +80,9 @@
 
         try {
             const response = await createRoom(payload);
+            const key = await generateEncryptionKey();
             tokenStore.set(response.token);
+            keyStore.set(key);
             await goto(`/room/${response.roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;

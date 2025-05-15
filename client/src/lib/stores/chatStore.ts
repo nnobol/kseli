@@ -2,6 +2,7 @@ import { writable } from "svelte/store";
 import type { IChatWebSocketClient } from "$lib/api/ws";
 import { goto } from "$app/navigation";
 import { errorStore } from "./errorStore";
+import { encodeMessage, decodeMessage, clearCryptoKey } from "./keyStore";
 import { useMocks } from "$lib/env";
 
 interface Message {
@@ -27,11 +28,14 @@ async function createChatWebSocketClient(token: string): Promise<IChatWebSocketC
     return new ChatWS(token);
 }
 
+let chatAborted = false;
 let chatConnection: IChatWebSocketClient | null = null;
 export const messages = writable<Message[]>([]);
 export const participants = writable<Participant[]>([]);
 
 export async function initChatSession(initialParticipants: Participant[], token: string) {
+    if (chatAborted) return;
+
     participants.set(initialParticipants);
 
     if (!chatConnection) {
@@ -40,9 +44,16 @@ export async function initChatSession(initialParticipants: Participant[], token:
             switch (message.type) {
                 case "msg":
                     const msgData = message.data as Message;
-                    messages.update((msgs) => {
-                        msgs.push(msgData);
-                        return msgs.slice();
+                    decodeMessage(msgData.content).then((decryptedContent) => {
+                        messages.update((msgs) => {
+                            msgs.push({
+                                ...msgData,
+                                content: decryptedContent,
+                            });
+                            return msgs.slice();
+                        });
+                    }).catch(() => {
+                        console.error("Failed to decode message.");
                     });
                     break;
                 case "join":
@@ -69,20 +80,26 @@ export async function initChatSession(initialParticipants: Participant[], token:
     }
 }
 
-export function sendMessage(content: string) {
+export async function sendMessage(content: string) {
     if (chatConnection) {
-        chatConnection.send(content);
+        const encodedMsg = await encodeMessage(content);
+        chatConnection.send(encodedMsg);
     } else {
         throw new Error("Cannot send message, try refreshing.");
     }
 }
 
 export function endChatSession() {
+    chatAborted = true;
+
     if (chatConnection) {
         chatConnection.close(1000, "leave");
         chatConnection = null;
-        messages.set([]);
-        participants.set([]);
-        goto("/");
     }
+
+    messages.set([]);
+    participants.set([]);
+    sessionStorage.clear();
+    clearCryptoKey();
+    goto("/");
 }

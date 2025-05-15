@@ -2,12 +2,8 @@
     import { onMount } from "svelte";
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
-    import { getItemFromSessionStorage } from "$lib/api/utils";
-
-    let isSameSession = false;
 
     onMount(() => {
-        isSameSession = !!getItemFromSessionStorage("activeRoomId");
         sessionStorage.clear();
     });
 </script>

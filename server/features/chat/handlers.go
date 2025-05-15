@@ -64,7 +64,7 @@ func CreateRoomHandler(s Storage) http.HandlerFunc {
 			return
 		}
 		origin := r.Header.Get("Origin")
-		inviteLink := fmt.Sprintf("%s/join?invite=%s", origin, inviteToken)
+		inviteLink := fmt.Sprintf("%s/join#invite=%s", origin, inviteToken)
 
 		room := &Room{
 			nextParticipantID:  2,

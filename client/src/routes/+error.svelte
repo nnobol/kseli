@@ -7,7 +7,10 @@
     let isSameSession = false;
 
     onMount(() => {
-        isSameSession = !!getItemFromSessionStorage("activeRoomId");
+        isSameSession =
+            !!getItemFromSessionStorage("activeRoomId") ||
+            !!getItemFromSessionStorage("token") ||
+            !!getItemFromSessionStorage("encryptionKey");
         sessionStorage.clear();
     });
 </script>

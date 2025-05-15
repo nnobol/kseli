@@ -1,12 +1,12 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/state";
     import ModalFormLayout from "$lib/features/modals/ModalFormLayout.svelte";
     import FloatingInputField from "$lib/components/fields/FloatingInputField.svelte";
     import ErrorAlert from "$lib/components/error-alert/ErrorAlert.svelte";
     import type { JoinRoomPayload, RoomErrorResponse } from "$lib/api/rooms";
     import { joinRoom } from "$lib/api/rooms";
     import { tokenStore } from "$lib/stores/tokenStore";
+    import { keyStore, importKeyFromString } from "$lib/stores/keyStore";
 
     let username: string = $state("");
     let errorMessage: string = $state("");
@@ -31,6 +31,12 @@
         }
     }
 
+    function parseHashParams(): Record<string, string> {
+        const hash = window.location.hash.slice(1); // remove leading '#'
+        const params = new URLSearchParams(hash);
+        return Object.fromEntries(params.entries());
+    }
+
     async function handleSubmit(event: Event) {
         event.preventDefault();
 
@@ -42,11 +48,25 @@
             return;
         }
 
-        const token = page.url.searchParams.get("invite");
+        const { invite, key } = parseHashParams();
 
-        if (!token) {
+        if (!invite) {
             errorMessage =
                 "Missing invite token. Please use a valid invite URL.";
+            return;
+        }
+
+        if (!key) {
+            errorMessage =
+                "Missing encryption key. Please use a valid invite URL.";
+            return;
+        }
+
+        try {
+            await importKeyFromString(key);
+        } catch (err) {
+            errorMessage =
+                "The encryption key is invalid or corrupted. Please use a valid invite URL.";
             return;
         }
 
@@ -55,8 +75,9 @@
         const payload: JoinRoomPayload = { username };
 
         try {
-            const response = await joinRoom(token, payload);
+            const response = await joinRoom(invite, payload);
             tokenStore.set(response.token);
+            keyStore.set(key);
             await goto(`/room/${response.roomId}`);
         } catch (err: any) {
             const error = err as RoomErrorResponse;

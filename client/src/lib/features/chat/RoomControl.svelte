@@ -4,6 +4,8 @@
     import InlineToast from "$lib/components/InlineToast.svelte";
     import TooltipWrapper from "$lib/components/TooltipWrapper.svelte";
     import { onMount, tick } from "svelte";
+    import { getItemFromSessionStorage } from "$lib/api/utils";
+    import { errorStore } from "$lib/stores/errorStore";
 
     interface Props {
         expiresAt: number;
@@ -28,7 +30,7 @@
 
     let remainingTime: string = $state("Loading...");
     let intervalId: number | undefined = $state();
-    let truncatedInviteLink = inviteLink?.substring(0, 25) + "...";
+    let inviteWithKey: string = $state("");
 
     function formatTime(totalSeconds: number): string {
         const minutes = Math.floor(totalSeconds / 60);
@@ -49,6 +51,17 @@
     }
 
     onMount(() => {
+        if (inviteLink) {
+            const key = getItemFromSessionStorage("encryptionKey");
+            if (!key) {
+                errorStore.set("invalid-session");
+                endChatSession();
+                return;
+            }
+
+            inviteWithKey = `${inviteLink}&key=${encodeURIComponent(key)}`;
+        }
+
         updateCountdown();
         intervalId = setInterval(updateCountdown, 1000);
 
@@ -132,15 +145,15 @@
             </div>
         </div>
 
-        {#if currentUserRole === 1 && inviteLink}
+        {#if currentUserRole === 1 && inviteWithKey}
             <div class="room-info-block">
                 <h3>Invite Link</h3>
                 <div class="info-line invite-container">
                     <span
                         class="copyable invite-truncated"
-                        onclick={(e) => copyToClipboard(e, inviteLink)}
+                        onclick={(e) => copyToClipboard(e, inviteWithKey)}
                     >
-                        {inviteLink}
+                        {inviteWithKey}
                     </span>
                 </div>
             </div>

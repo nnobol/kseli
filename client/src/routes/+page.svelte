@@ -48,7 +48,7 @@
                 <p class="text-additional">
                     Create a room, invite others, chat anonymously, and leave
                     when you're done. No account, no tracking, no data stored,
-                    simple as that.
+                    fully end to end encrypted, simple as that.
                 </p>
             </div>
         </div>

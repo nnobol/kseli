@@ -21,7 +21,7 @@
     async function handleSend() {
         if (message.length > 0 && message.length <= MAX_MESSAGE_LENGTH) {
             try {
-                sendMessage(message);
+                await sendMessage(message);
             } catch (err) {
                 const errorId = Date.now();
                 const messageText =
