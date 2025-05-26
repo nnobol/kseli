@@ -73,7 +73,7 @@
 
     <footer>
         <a
-            href="https://github.com/NikolozOboladze"
+            href="https://github.com/nnobol"
             target="_blank"
             rel="noopener"
         >

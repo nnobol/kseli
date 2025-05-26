@@ -109,7 +109,7 @@ func getRoom(t *testing.T, mustGet, isAdmin bool, expectedBadStatus int, handler
 		}
 		var token string
 		if isAdmin {
-			parts := strings.Split(resp.InviteLink, "?invite=")
+			parts := strings.Split(resp.InviteLink, "#invite=")
 			if len(parts) != 2 {
 				t.Fatalf("bad invite link %q", resp.InviteLink)
 			}

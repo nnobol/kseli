@@ -56,7 +56,7 @@ func Test_GetRoom_Success_Admin(t *testing.T) {
 		t.Fatal("expected non-empty InviteLink for admin user")
 	}
 
-	if !strings.Contains(resp.InviteLink, "?invite=") {
+	if !strings.Contains(resp.InviteLink, "#invite=") {
 		t.Fatalf("unexpected InviteLink format: %s", resp.InviteLink)
 	}
 }
