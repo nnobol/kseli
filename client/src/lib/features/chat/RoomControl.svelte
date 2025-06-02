@@ -140,7 +140,7 @@
                 </span>
                 <span>|</span>
                 <TooltipWrapper content="Remaining Time">
-                    <span>{remainingTime}</span>
+                    <span class="fixed-time">{remainingTime}</span>
                 </TooltipWrapper>
             </div>
         </div>
@@ -229,6 +229,14 @@
     .username-truncated {
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .fixed-time {
+        width: 5ch;
+        text-align: center;
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
     }
 
     .invite-container {

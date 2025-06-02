@@ -89,6 +89,13 @@ export async function sendMessage(content: string) {
     }
 }
 
+export function resetChatSession() {
+    chatAborted = false;
+    chatConnection = null;
+    messages.set([]);
+    participants.set([]);
+}
+
 export function endChatSession() {
     chatAborted = true;
 

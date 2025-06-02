@@ -2,12 +2,13 @@
     import { onMount } from "svelte";
     import { beforeNavigate } from "$app/navigation";
     import ChatRoom from "$lib/features/chat/ChatRoom.svelte";
-    import { initChatSession, endChatSession } from "$lib/stores/chatStore";
+    import { initChatSession, resetChatSession, endChatSession } from "$lib/stores/chatStore";
     import { closeRoom } from "$lib/api/rooms";
 
     let { data } = $props();
 
     onMount(() => {
+        resetChatSession();
         initChatSession(data.roomDetails.participants, data.token);
     });
 
