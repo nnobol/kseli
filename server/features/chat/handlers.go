@@ -229,10 +229,10 @@ func JoinRoomHandler(s Storage) http.HandlerFunc {
 		token, err := auth.CreateToken(claims)
 		if err != nil {
 			room.mu.Lock()
-			if p.wsTimeout != nil {
-				p.wsTimeout.Stop()
-				p.wsTimeout = nil
-			}
+			// if p.wsTimeout != nil {
+			// 	p.wsTimeout.Stop()
+			// 	p.wsTimeout = nil
+			// }
 			delete(room.participants, sessionID)
 			room.mu.Unlock()
 			common.WriteError(w, http.StatusInternalServerError, "Failed to create token: "+err.Error())
@@ -480,6 +480,66 @@ func RoomWSHandler(s Storage) http.HandlerFunc {
 		}
 
 		room.addWSConn(conn, claims.Username)
+	}
+}
+
+type MetricsMessage struct {
+	RoomCount        int `json:"roomCount"`
+	ParticipantCount int `json:"participantCount"`
+}
+
+func RoomMetricsWSHandler(s Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		_, errMsg := middleware.ValidateOriginHost(origin)
+
+		conn, _, _, err := ws.HTTPUpgrader{
+			Timeout: 2 * time.Second,
+		}.Upgrade(r, w)
+		if err != nil {
+			return
+		}
+
+		if errMsg != "" {
+			wsutil.WriteServerMessage(conn, ws.OpClose, ws.NewCloseFrameBody(ws.StatusNormalClosure, "invalid-origin"))
+			conn.Close()
+			return
+		}
+
+		go func() {
+			defer conn.Close()
+
+			roomCount, participantCount := s.MetricsSnapshot()
+			initialMsg := MetricsMessage{
+				RoomCount:        roomCount,
+				ParticipantCount: participantCount,
+			}
+			bytes, err := json.Marshal(initialMsg)
+			if err == nil {
+				wsutil.WriteServerMessage(conn, ws.OpText, bytes)
+			}
+
+			ticker := time.NewTicker(3 * time.Second)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				roomCount, participantCount := s.MetricsSnapshot()
+
+				msg := MetricsMessage{
+					RoomCount:        roomCount,
+					ParticipantCount: participantCount,
+				}
+
+				data, err := json.Marshal(msg)
+				if err != nil {
+					return
+				}
+
+				if err := wsutil.WriteServerMessage(conn, ws.OpText, data); err != nil {
+					return
+				}
+			}
+		}()
 	}
 }
 

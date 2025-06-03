@@ -70,3 +70,23 @@ export class ChatWebSocketClient implements IChatWebSocketClient {
         this.closeListeners.push(callback);
     }
 }
+
+export interface MetricsPayload {
+    roomCount: number;
+    participantCount: number;
+}
+
+export function getRoomMetrics(onData: (payload: MetricsPayload) => void): WebSocket {
+    const ws = new WebSocket("/ws/metrics");
+
+    ws.onmessage = (event: MessageEvent) => {
+        try {
+            const data: MetricsPayload = JSON.parse(event.data);
+            onData(data);
+        } catch (e) {
+            console.error("Error parsing WebSocket metrics message:", e);
+        }
+    }
+
+    return ws;
+}

@@ -68,6 +68,8 @@ func New() *http.ServeMux {
 
 	mux.Handle("/ws/room", chat.RoomWSHandler(s))
 
+	mux.Handle("/ws/metrics", chat.RoomMetricsWSHandler(s))
+
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		filePath := filepath.Join(clientDir, r.URL.Path)
 		info, err := os.Stat(filePath)

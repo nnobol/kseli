@@ -48,10 +48,10 @@ func (r *Room) addWSConn(conn net.Conn, username string) {
 
 	r.mu.Lock()
 	// WS connection established, we stop the timer
-	if p.wsTimeout != nil {
-		p.wsTimeout.Stop()
-		p.wsTimeout = nil
-	}
+	// if p.wsTimeout != nil {
+	// 	p.wsTimeout.Stop()
+	// 	p.wsTimeout = nil
+	// }
 	if p.wsConn != nil {
 		p.wsConn.Close()
 		p.wsConn = nil

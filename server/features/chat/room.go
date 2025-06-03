@@ -29,6 +29,14 @@ type Storage interface {
 	GetRoom(roomID string) (*Room, bool)
 	DeleteRoom(roomID string)
 	RoomCleanupFunc() func(roomID string)
+
+	MetricsSnapshot() (roomCount, participantCount int)
+}
+
+func (r *Room) GetParticipantsLen() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.participants)
 }
 
 // make sure caller locks room for reading
@@ -85,15 +93,15 @@ func (r *Room) join(p *Participant) {
 	r.participants[p.sessionID] = p
 
 	// Start 10s timeout to wait for WebSocket connection
-	p.wsTimeout = time.AfterFunc(10*time.Second, func() {
-		r.mu.Lock()
-		defer r.mu.Unlock()
+	// p.wsTimeout = time.AfterFunc(10*time.Second, func() {
+	// 	r.mu.Lock()
+	// 	defer r.mu.Unlock()
 
-		// If WS is still not connected, remove the participant
-		if p.wsConn == nil {
-			delete(r.participants, p.sessionID)
-		}
-	})
+	// 	// If WS is still not connected, remove the participant
+	// 	if p.wsConn == nil {
+	// 		delete(r.participants, p.sessionID)
+	// 	}
+	// })
 }
 
 func (r *Room) kick(pID uint8) error {

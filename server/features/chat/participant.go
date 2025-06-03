@@ -3,7 +3,6 @@ package chat
 import (
 	"net"
 	"sync"
-	"time"
 
 	"kseli/common"
 )
@@ -19,7 +18,7 @@ type Participant struct {
 	// wsTimeout is a timer used to clean up a participant that never establishes a WS connection
 	// used in room.go in the "join" method
 	// stopped in ws.go in the "addWSConn" method
-	wsTimeout *time.Timer
+	// wsTimeout *time.Timer
 }
 
 type ParticipantView struct {
