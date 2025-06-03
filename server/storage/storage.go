@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	DayMinRooms = 300
-	DayMaxRooms = 700
+	DayMinRooms = 100
+	DayMaxRooms = 300
 )
 
 var cleanupChan = make(chan string, 50)
@@ -39,7 +39,7 @@ func InitializeStorage() *MainStorage {
 	storage.updateMetrics()
 
 	go func() {
-		ticker := time.NewTicker(3 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			storage.updateMetrics()
@@ -111,7 +111,7 @@ func (s *MainStorage) updateMetrics() {
 		maxFake = 0
 	}
 
-	const maxJitter = 12
+	const maxJitter = 8
 
 	s.simMu.Lock()
 	{
@@ -125,43 +125,43 @@ func (s *MainStorage) updateMetrics() {
 			cand = maxFake
 		}
 		s.lastRooms = cand
+
+		fakeRooms := s.lastRooms
+
+		const avgPerRoom = 3
+		baseParticipants := fakeRooms * avgPerRoom
+		deltaParticipants := maxJitter * avgPerRoom
+		fakeParticipants := baseParticipants + deltaParticipants
+
+		hardMin := fakeRooms * 2
+		hardMax := fakeRooms * 5
+		if fakeParticipants < hardMin {
+			fakeParticipants = hardMin
+		}
+		if fakeParticipants > hardMax {
+			fakeParticipants = hardMax
+		}
+
+		totalRooms := realRooms + fakeRooms
+		totalParticipants := realParticipants + fakeParticipants
+
+		now := time.Now()
+		slot := now.Hour()*2 + now.Minute()/30
+		multiplier := usageMultiplier(slot)
+
+		totalRooms = int(float64(totalRooms) * multiplier)
+		if totalRooms < 1 {
+			totalRooms = 1
+		}
+
+		totalParticipants = int(float64(totalParticipants) * multiplier)
+		if totalParticipants < 1 {
+			totalParticipants = 1
+		}
+
+		s.cachedRooms = totalRooms
+		s.cachedParticipants = totalParticipants
 	}
-
-	fakeRooms := s.lastRooms
-
-	const avgPerRoom = 3
-	baseParticipants := fakeRooms * avgPerRoom
-	deltaParticipants := maxJitter * avgPerRoom
-	fakeParticipants := baseParticipants + deltaParticipants
-
-	hardMin := fakeRooms * 2
-	hardMax := fakeRooms * 5
-	if fakeParticipants < hardMin {
-		fakeParticipants = hardMin
-	}
-	if fakeParticipants > hardMax {
-		fakeParticipants = hardMax
-	}
-
-	totalRooms := realRooms + fakeRooms
-	totalParticipants := realParticipants + fakeParticipants
-
-	now := time.Now()
-	slot := now.Hour()*2 + now.Minute()/30
-	multiplier := usageMultiplier(slot)
-
-	totalRooms = int(float64(totalRooms) * multiplier)
-	if totalRooms < 1 {
-		totalRooms = 1
-	}
-
-	totalParticipants = int(float64(totalParticipants) * multiplier)
-	if totalParticipants < 1 {
-		totalParticipants = 1
-	}
-
-	s.cachedRooms = totalRooms
-	s.cachedParticipants = totalParticipants
 	s.simMu.Unlock()
 }
 

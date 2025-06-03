@@ -519,7 +519,7 @@ func RoomMetricsWSHandler(s Storage) http.HandlerFunc {
 				wsutil.WriteServerMessage(conn, ws.OpText, bytes)
 			}
 
-			ticker := time.NewTicker(3 * time.Second)
+			ticker := time.NewTicker(10 * time.Second)
 			defer ticker.Stop()
 
 			for range ticker.C {
