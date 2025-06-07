@@ -72,6 +72,9 @@
     </main>
 
     <footer>
+        <a href="https://github.com/nnobol/kseli" target="_blank" rel="noopener">
+            SOURCE CODE
+        </a>
         <a href="https://github.com/nnobol" target="_blank" rel="noopener">
             CHECK ME OUT
         </a>
@@ -177,8 +180,10 @@
 
     footer {
         padding: 0.75rem 1rem;
-        text-align: right;
         user-select: none;
+        display: flex;
+        justify-content: right;
+        gap: 1rem;
     }
 
     @media (min-width: 360px) {
