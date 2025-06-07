@@ -85,15 +85,23 @@ func (r *Room) join(p *Participant) {
 	r.participants[p.sessionID] = p
 
 	// Start 10s timeout to wait for WebSocket connection
-	// p.wsTimeout = time.AfterFunc(10*time.Second, func() {
-	// 	r.mu.Lock()
-	// 	defer r.mu.Unlock()
+	p.wsTimeout = time.AfterFunc(10*time.Second, func() {
+		var shouldClose bool
 
-	// 	// If WS is still not connected, remove the participant
-	// 	if p.wsConn == nil {
-	// 		delete(r.participants, p.sessionID)
-	// 	}
-	// })
+		r.mu.Lock()
+		// If WS is still not connected, remove the participant
+		if p.wsConn == nil {
+			delete(r.participants, p.sessionID)
+			if p.role == common.Admin {
+				shouldClose = true
+			}
+		}
+		r.mu.Unlock()
+
+		if shouldClose {
+			r.Close(false)
+		}
+	})
 }
 
 func (r *Room) kick(pID uint8) error {
