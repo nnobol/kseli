@@ -29,14 +29,6 @@ type Storage interface {
 	GetRoom(roomID string) (*Room, bool)
 	DeleteRoom(roomID string)
 	RoomCleanupFunc() func(roomID string)
-
-	MetricsSnapshot() (roomCount, participantCount int)
-}
-
-func (r *Room) GetParticipantsLen() int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return len(r.participants)
 }
 
 // make sure caller locks room for reading
